@@ -1,3 +1,5 @@
+<img src="./audiolm.png" width="600px"></img>
+
 ## AudioLM - Pytorch (wip)
 
 Implementation of <a href="https://google-research.github.io/seanet/audiolm/examples/">AudioLM</a>, a Language Modeling Approach to Audio Generation out of Google Research, in Pytorch
