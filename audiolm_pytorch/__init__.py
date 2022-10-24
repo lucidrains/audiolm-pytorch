@@ -1,1 +1,2 @@
 from audiolm_pytorch.audiolm_pytorch import AudioLM
+from audiolm_pytorch.audiolm_pytorch import SoundStream
