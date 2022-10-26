@@ -1,8 +1,9 @@
 import math
 
 import torch
-import torch.nn.functional as F
 from torch import nn, einsum
+import torch.nn.functional as F
+
 from einops import rearrange
 
 from vector_quantize_pytorch import ResidualVQ
@@ -11,6 +12,14 @@ from vector_quantize_pytorch import ResidualVQ
 
 def exists(val):
     return val is not None
+
+# gan losses
+
+def hinge_discr_loss(fake, real):
+    return (F.relu(1 + fake) + F.relu(1 - real)).mean()
+
+def hinge_gen_loss(fake):
+    return -fake.mean()
 
 # sound stream
 
