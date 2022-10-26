@@ -19,6 +19,7 @@ setup(
   ],
   install_requires=[
     'einops>=0.4',
+    'ema-pytorch',
     'torch>=1.6',
     'vector-quantize-pytorch'
   ],
