@@ -13,3 +13,13 @@ Implementation of <a href="https://google-research.github.io/seanet/audiolm/exam
   year   = {2022}
 }
 ```
+
+```bibtex
+@misc{https://doi.org/10.48550/arxiv.2107.03312,
+  title  = {SoundStream: An End-to-End Neural Audio Codec},
+  author = {Zeghidour, Neil and Luebs, Alejandro and Omran, Ahmed and Skoglund, Jan and Tagliasacchi, Marco},
+  publisher = {arXiv},
+  url    = {https://arxiv.org/abs/2107.03312},
+  year   = {2021}
+}
+```
