@@ -93,7 +93,10 @@ class SoundStream(nn.Module):
         self.rq = ResidualVQ(
             dim = codebook_dim,
             num_quantizers = rq_num_quantizers,
-            codebook_size = codebook_size
+            codebook_size = codebook_size,
+            kmeans_init = True,
+            threshold_ema_dead_code = 2,
+            sync_kmeans = False
         )
 
         decoder_blocks = []
