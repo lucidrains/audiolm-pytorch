@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch import nn, einsum
 from einops import rearrange
 
-from vector_quantize_pytorch import VectorQuantize as VQ
+from vector_quantize_pytorch import ResidualVQ
 
 # helper functions
 
@@ -14,12 +14,128 @@ def exists(val):
 
 # sound stream
 
-class SoundStream(nn.Module):
-    def __init__(self):
+class Residual(nn.Module):
+    def __init__(self, fn):
         super().__init__()
+        self.fn = fn
+
+    def forward(self, x, **kwargs):
+        return self.fn(x, **kwargs) + x
+
+class CausalConv1d(nn.Module):
+    def __init__(self, chan_in, chan_out, kernel_size, **kwargs):
+        super().__init__()
+        kernel_size = kernel_size
+        dilation = kwargs.get('dilation', 1)
+        self.causal_padding = dilation * (kernel_size - 1)
+
+        self.conv = nn.Conv1d(chan_in, chan_out, kernel_size, **kwargs)
 
     def forward(self, x):
-        return x
+        x = F.pad(x, (self.causal_padding, 0))
+        return self.conv(x)
+
+class CausalConvTranspose1d(nn.Module):
+    """ unsure if this module is correct """
+
+    def __init__(self, chan_in, chan_out, kernel_size, stride, **kwargs):
+        super().__init__()
+        self.neg_padding = kernel_size // 2
+        self.conv = nn.ConvTranspose1d(chan_in, chan_out, kernel_size, stride, **kwargs)
+
+    def forward(self, x):
+        out = self.conv(x)
+        out = out[..., :-self.neg_padding]
+        return out
+
+def ResidualUnit(chan_in, chan_out, dilation, kernel_size = 7):
+    return Residual(nn.Sequential(
+        CausalConv1d(chan_in, chan_out, kernel_size, dilation = dilation),
+        CausalConv1d(chan_out, chan_out, 1)
+    ))
+
+def EncoderBlock(chan_in, chan_out, stride):
+    return nn.Sequential(
+        ResidualUnit(chan_in, chan_in, 1),
+        ResidualUnit(chan_in, chan_in, 3),
+        ResidualUnit(chan_in, chan_in, 9),
+        CausalConv1d(chan_in, chan_out, 2 * stride, stride = stride)
+    )
+
+def DecoderBlock(chan_in, chan_out, stride):
+    even_stride = (stride % 2 == 0)
+    padding = (stride + (0 if even_stride else 1)) // 2
+    output_padding = 0 if even_stride else 1
+
+    return nn.Sequential(
+        CausalConvTranspose1d(chan_in, chan_out, 2 * stride, stride = stride),
+        ResidualUnit(chan_out, chan_out, 1),
+        ResidualUnit(chan_out, chan_out, 3),
+        ResidualUnit(chan_out, chan_out, 9),
+    )
+
+class SoundStream(nn.Module):
+    def __init__(
+        self,
+        *,
+        channels = 32,
+        strides = (2, 4, 5, 8),
+        channel_mults = (2, 4, 8, 16),
+        codebook_dim = 512,
+        codebook_size = 1024,
+        rq_num_quantizers = 8,
+        input_channels = 1
+    ):
+        super().__init__()
+
+        layer_channels = tuple(map(lambda t: t * channels, channel_mults))
+        layer_channels = (channels, *layer_channels)
+        chan_in_out_pairs = tuple(zip(layer_channels[:-1], layer_channels[1:]))
+
+        encoder_blocks = []
+
+        for ((chan_in, chan_out), layer_stride) in zip(chan_in_out_pairs, strides):
+            encoder_blocks.append(EncoderBlock(chan_in, chan_out, layer_stride))
+
+        self.encoder = nn.Sequential(
+            CausalConv1d(input_channels, channels, 7),
+            *encoder_blocks,
+            CausalConv1d(layer_channels[-1], codebook_dim, 3)
+        )
+
+        self.rq = ResidualVQ(
+            dim = codebook_dim,
+            num_quantizers = rq_num_quantizers,
+            codebook_size = codebook_size
+        )
+
+        decoder_blocks = []
+
+        for ((chan_in, chan_out), layer_stride) in zip(reversed(chan_in_out_pairs), reversed(strides)):
+            decoder_blocks.append(DecoderBlock(chan_out, chan_in, layer_stride))
+
+        self.decoder = nn.Sequential(
+            CausalConv1d(codebook_dim, layer_channels[-1], 7),
+            *decoder_blocks,
+            CausalConv1d(channels, input_channels, 7)
+        )
+
+    def forward(self, x):
+        if x.ndim == 2:
+            x = rearrange(x, 'b n -> b 1 n')
+
+        orig_x = x.clone()
+
+        x = self.encoder(x)
+
+        x = rearrange(x, 'b c n -> b n c')
+        x, indices, commit_loss = self.rq(x)
+        x = rearrange(x, 'b n c -> b c n')
+
+        recon_x = self.decoder(x)
+
+        recon_loss = F.mse_loss(orig_x, recon_x)
+        return recon_loss
 
 # relative positional bias
 
