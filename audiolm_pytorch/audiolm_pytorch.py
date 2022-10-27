@@ -156,7 +156,6 @@ class CausalConvTranspose1d(nn.Module):
     def forward(self, x):
         n = x.shape[-1]
 
-        x = F.pad(x, (self.padding, 0))
         out = self.conv(x)
         out = out[..., :(n * self.upsample_factor)]
 
