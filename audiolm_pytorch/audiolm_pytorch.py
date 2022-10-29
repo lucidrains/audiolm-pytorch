@@ -326,12 +326,12 @@ class SoundStream(nn.Module):
 
         discr_intermediates = []
 
-
         # adversarial loss for multi-scale discriminators
 
         real, fake = orig_x, recon_x
 
         # features from stft
+
         (stft_real_logits, stft_real_intermediates), (stft_fake_logits, stft_fake_intermediates) = map(partial(self.stft_discriminator, return_intermediates=True), (real, fake))
         discr_intermediates.append((stft_real_intermediates, stft_fake_intermediates))
 
@@ -347,9 +347,8 @@ class SoundStream(nn.Module):
         feature_losses = []
 
         for real_intermediates, fake_intermediates in discr_intermediates:
-            losses = [F.mse_loss(real_intermediate, fake_intermediate) for real_intermediate, fake_intermediate in zip(real_intermediates, fake_intermediates)]
+            losses = [F.l1_loss(real_intermediate, fake_intermediate) for real_intermediate, fake_intermediate in zip(real_intermediates, fake_intermediates)]
             feature_losses.extend(losses)
-
 
         feature_loss = torch.stack(feature_losses).mean()
 
