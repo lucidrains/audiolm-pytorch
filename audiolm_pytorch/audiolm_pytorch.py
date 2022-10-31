@@ -121,7 +121,14 @@ class STFTDiscriminator(nn.Module):
 
     def forward(self, x, return_intermediates = False):
         x = rearrange(x, 'b 1 n -> b n')
-        x = torch.view_as_complex(torch.stft(x, 256))
+        # reference: The content of the paper( https://arxiv.org/pdf/2107.03312.pdf)is as follows:
+        '''
+        The STFT-based discriminator is illustrated in Figure 4
+        and operates on a single scale, computing the STFT with a
+        window length of W = 1024 samples and a hop length of
+        H = 256 samples
+        '''
+        x = torch.view_as_complex(torch.stft(x,1024, hop_length=256,win_length=1024))
         x = rearrange(x, 'b ... -> b 1 ...')
 
         intermediates = []
