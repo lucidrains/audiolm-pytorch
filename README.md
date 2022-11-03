@@ -63,3 +63,12 @@ loss.backward()
   year   = {2021}
 }
 ```
+
+```bibtex
+@misc{shazeer2020glu,
+    title   = {GLU Variants Improve Transformer},
+    author  = {Noam Shazeer},
+    year    = {2020},
+    url     = {https://arxiv.org/abs/2002.05202}
+}
+```

@@ -442,12 +442,17 @@ class RelativePositionBias(nn.Module):
 
 # feedforward
 
+class GEGLU(nn.Module):
+    def forward(self, x):
+        x, gate = x.chunk(2, dim = -1)
+        return F.gelu(gate) * x
+
 def FeedForward(dim, mult = 4):
-    inner_dim = int(dim * mult)
+    inner_dim = int(dim * 2 * mult / 3)
     return nn.Sequential(
         nn.LayerNorm(dim),
-        nn.Linear(dim, inner_dim, bias = False),
-        nn.GELU(),
+        nn.Linear(dim, inner_dim * 2, bias = False),
+        GEGLU(),
         nn.Linear(inner_dim, dim, bias = False)
     )
 
