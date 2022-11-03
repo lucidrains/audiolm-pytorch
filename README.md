@@ -44,6 +44,10 @@ loss = train_wrapper(
 loss.backward()
 ```
 
+## Todo
+
+- [ ] allow for cross attention based conditioning vs prefix based
+
 ## Citations
 
 ```bibtex
