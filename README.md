@@ -4,6 +4,46 @@
 
 Implementation of <a href="https://google-research.github.io/seanet/audiolm/examples/">AudioLM</a>, a Language Modeling Approach to Audio Generation out of Google Research, in Pytorch
 
+## Install
+
+```bash
+$ pip install audiolm-pytorch
+```
+
+## Usage
+
+```python
+import torch
+from audiolm_pytorch.audiolm_pytorch import SoundStream, AudioLM, FineTransformer, FineTransformerWrapper
+
+soundstream = SoundStream(
+    codebook_size = 1024,
+    rq_num_quantizers = 8,
+)
+
+transformer = FineTransformer(
+    num_coarse_quantizers = 3,
+    num_fine_quantizers = 5,
+    codebook_size = 1024,
+    dim = 512,
+    depth = 6
+)
+
+train_wrapper = FineTransformerWrapper(
+    soundstream = soundstream,
+    transformer = transformer
+).cuda()
+
+raw_waveform = torch.randn(1, 320 * 512).cuda()
+
+loss = train_wrapper(
+    raw_wave = raw_waveform,
+    return_loss = True
+)
+
+loss.backward()
+```
+
 ## Citations
 
 ```bibtex
