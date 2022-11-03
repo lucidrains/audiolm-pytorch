@@ -21,7 +21,7 @@ setup(
     'einops>=0.4',
     'ema-pytorch',
     'torch>=1.6',
-    'vector-quantize-pytorch>=0.10.2'
+    'vector-quantize-pytorch>=0.10.5'
   ],
   classifiers=[
     'Development Status :: 4 - Beta',
