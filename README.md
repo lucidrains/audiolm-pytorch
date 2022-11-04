@@ -46,7 +46,11 @@ loss.backward()
 
 ## Todo
 
-- [ ] allow for cross attention based conditioning vs prefix based
+- [ ] complete full training code for soundstream, taking care of discriminator training
+- [ ] complete CoarseTransformer
+- [ ] complete sampling code for both Coarse and Fine Transformers, which will be tricky
+- [ ] accommodate variable lengthed audio, bring in eos token
+- [ ] full transformer training code for all three transformers
 
 ## Citations
 
