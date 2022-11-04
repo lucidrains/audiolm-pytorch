@@ -62,6 +62,7 @@ loss.backward()
 - [ ] full transformer training code for all three transformers
 - [ ] make sure full inference with or without prompting works on the `AudioLM` class
 - [ ] offer option to weight tie coarse, fine, and semantic embeddings across the 3 hierarchical transformers
+- [ ] DRY a little at the end
 
 ## Citations
 
