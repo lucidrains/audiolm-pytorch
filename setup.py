@@ -18,7 +18,7 @@ setup(
     'audio generation'
   ],
   install_requires=[
-    'einops>=0.4',
+    'einops>=0.5',
     'ema-pytorch',
     'torch>=1.6',
     'vector-quantize-pytorch>=0.10.5'
