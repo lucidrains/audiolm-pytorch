@@ -44,9 +44,17 @@ loss = train_wrapper(
 loss.backward()
 ```
 
+## Appreciation
+
+- <a href="https://stability.ai/">Stability.ai</a> for the generous sponsorship to work and open source cutting edge artificial intelligence research
+
+- <a href="https://huggingface.co/">🤗 Huggingface</a> for their amazing transformers and accelerate library
+
 ## Todo
 
 - [ ] complete full training code for soundstream, taking care of discriminator training
+- [ ] use huggingface wav2vec for embeddings, use VQ library for learning the kmeans through reconstruction task
+- [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
 - [ ] complete CoarseTransformer
 - [ ] complete sampling code for both Coarse and Fine Transformers, which will be tricky
 - [ ] accommodate variable lengthed audio, bring in eos token
