@@ -59,6 +59,8 @@ loss.backward()
 - [ ] complete sampling code for both Coarse and Fine Transformers, which will be tricky
 - [ ] accommodate variable lengthed audio, bring in eos token
 - [ ] full transformer training code for all three transformers
+- [ ] make sure full inference with or without prompting works on the `AudioLM` class
+- [ ] offer option to weight tie coarse, fine, and semantic embeddings across the 3 hierarchical transformers
 
 ## Citations
 
