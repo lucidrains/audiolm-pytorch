@@ -761,8 +761,8 @@ class FineTransformerWrapper(nn.Module):
     def __init__(
         self,
         *,
-        soundstream: Optional[SoundStream],
         transformer: FineTransformer,
+        soundstream: Optional[SoundStream] = None,
         num_coarse_quantize = 3
     ):
         super().__init__()
@@ -823,8 +823,8 @@ class CoarseTransformerWrapper(nn.Module):
     def __init__(
         self,
         *,
-        soundstream: Optional[SoundStream],
         transformer: FineTransformer,
+        soundstream: Optional[SoundStream]  = None,
         num_coarse_quantize = 3
     ):
         super().__init__()
