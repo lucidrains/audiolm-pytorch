@@ -18,10 +18,11 @@ setup(
     'audio generation'
   ],
   install_requires=[
+    'accelerate',
     'einops>=0.5',
     'ema-pytorch',
+    'fairseq',
     'torch>=1.6',
-    'transformers',
     'vector-quantize-pytorch>=0.10.5'
   ],
   classifiers=[
