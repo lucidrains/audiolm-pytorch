@@ -55,9 +55,9 @@ loss.backward()
 ## Todo
 
 - [x] complete CoarseTransformer
+- [x] use fairseq vq-wav2vec for embeddings
 
 - [ ] complete full training code for soundstream, taking care of discriminator training
-- [ ] use huggingface wav2vec for embeddings, use VQ library for learning the kmeans through reconstruction task
 - [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
 - [ ] complete sampling code for both Coarse and Fine Transformers, which will be tricky
 - [ ] accommodate variable lengthed audio, bring in eos token
@@ -66,6 +66,7 @@ loss.backward()
 - [ ] offer option to weight tie coarse, fine, and semantic embeddings across the 3 hierarchical transformers
 - [ ] DRY a little at the end
 - [ ] figure out how to suppress logging in fairseq
+- [ ] test with speech synthesis for starters, add conditioning + classifier free guidance as well
 
 ## Citations
 
