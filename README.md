@@ -65,6 +65,7 @@ loss.backward()
 - [ ] make sure full inference with or without prompting works on the `AudioLM` class
 - [ ] offer option to weight tie coarse, fine, and semantic embeddings across the 3 hierarchical transformers
 - [ ] DRY a little at the end
+- [ ] figure out how to suppress logging in fairseq
 
 ## Citations
 

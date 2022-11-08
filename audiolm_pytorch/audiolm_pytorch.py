@@ -11,6 +11,8 @@ from einops import rearrange, repeat
 
 from vector_quantize_pytorch import ResidualVQ
 
+from audiolm_pytorch.vq_wav2vec import FairseqVQWav2Vec
+
 # helper functions
 
 def exists(val):
@@ -549,6 +551,7 @@ class SemanticTransformer(nn.Module):
         *,
         num_semantic_tokens,
         dim,
+        wav2vec: Optional[FairseqVQWav2Vec] = None,
         **kwargs
     ):
         super().__init__()
@@ -556,14 +559,23 @@ class SemanticTransformer(nn.Module):
 
         self.semantic_embedding = nn.Embedding(num_semantic_tokens, dim)
 
+        self.wav2vec = wav2vec
         self.transformer = Transformer(dim = dim, **kwargs)
         self.to_logits = nn.Linear(dim, num_semantic_tokens)
 
     def forward(
         self,
-        ids,
+        *,
+        raw_wave = None,
+        ids = None,
         return_loss = False
     ):
+        assert exists(raw_wave) ^ exists(ids)
+
+        if not exists(ids):
+            assert exists(self.wav2vec)
+            ids = self.wav2vec(raw_wave)
+
         if return_loss:
             labels, ids = ids.clone(), ids[:, :-1]
 
@@ -594,6 +606,7 @@ class CoarseTransformer(nn.Module):
         codebook_size,
         num_coarse_quantizers,
         dim,
+        wav2vec: Optional[FairseqVQWav2Vec] = None,
         **kwargs
     ):
         super().__init__()
@@ -602,6 +615,7 @@ class CoarseTransformer(nn.Module):
         self.semantic_embedding = nn.Embedding(num_semantic_tokens, dim)
         self.coarse_embedding = nn.Embedding(num_coarse_quantizers * codebook_size, dim)
 
+        self.wav2vec = wav2vec
         self.transformer = Transformer(dim = dim, **kwargs)
 
         self.codebook_size = codebook_size
@@ -612,6 +626,7 @@ class CoarseTransformer(nn.Module):
 
     def forward(
         self,
+        *,
         semantic_token_ids,
         coarse_token_ids,
     ):
@@ -825,10 +840,13 @@ class CoarseTransformerWrapper(nn.Module):
         *,
         transformer: FineTransformer,
         soundstream: Optional[SoundStream]  = None,
+        wav2vec: Optional[FairseqVQWav2Vec] = None,
         num_coarse_quantize = 3
     ):
         super().__init__()
         self.soundstream = soundstream
+        self.wav2vec = wav2vec
+
         self.transformer = transformer
 
         assert num_coarse_quantize > 0
@@ -837,14 +855,20 @@ class CoarseTransformerWrapper(nn.Module):
     def forward(
         self,
         *,
-        semantic_token_ids,
+        semantic_token_ids = None,
         raw_wave = None,
         coarse_token_ids = None,
         return_loss = False
     ):
-        assert exists(raw_wave) ^ exists(coarse_token_ids), 'either raw waveform (raw_wav) is given, or coarse and fine token ids (coarse_token_ids, fine_token_ids)'
+        assert exists(raw_wave) or exists(semantic_token_ids), 'either raw waveform (raw_wave) is given or semantic token ids are given (semantic_token_ids)'
+        assert exists(raw_wave) or exists(coarse_token_ids), 'either raw waveform (raw_wav) is given, or coarse and fine token ids (coarse_token_ids, fine_token_ids)'
+        assert not all(map(exists, (raw_wave, semantic_token_ids, coarse_token_ids)))
 
-        if exists(raw_wave):
+        if not exists(semantic_token_ids):
+            assert exists(self.wav2vec), 'VQWav2Vec must be be provided if given raw wave for training'
+            semantic_token_ids = self.wav2vec(raw_wave)
+
+        if not exists(coarse_token_ids):
             assert exists(self.soundstream), 'SoundStream must be provided if given raw wave for training'
 
             with torch.no_grad():
