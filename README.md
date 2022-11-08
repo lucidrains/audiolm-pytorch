@@ -57,6 +57,7 @@ loss.backward()
 - [x] complete CoarseTransformer
 - [x] use fairseq vq-wav2vec for embeddings
 
+- [ ] incorporate ability to use hubert intermediate features as semantic tokens, recommended by <a href="https://github.com/lucidrains/audiolm-pytorch/discussions/13">eonglints</a>
 - [ ] complete full training code for soundstream, taking care of discriminator training
 - [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
 - [ ] complete sampling code for both Coarse and Fine Transformers, which will be tricky
