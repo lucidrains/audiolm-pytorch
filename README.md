@@ -97,3 +97,13 @@ loss.backward()
     url     = {https://arxiv.org/abs/2002.05202}
 }
 ```
+
+```bibtex
+@article{Shazeer2019FastTD,
+    title   = {Fast Transformer Decoding: One Write-Head is All You Need},
+    author  = {Noam M. Shazeer},
+    journal = {ArXiv},
+    year    = {2019},
+    volume  = {abs/1911.02150}
+}
+```
