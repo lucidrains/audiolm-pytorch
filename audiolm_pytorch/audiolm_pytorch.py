@@ -1,6 +1,6 @@
 import math
 from functools import partial
-from typing import Optional
+from typing import Optional, Union
 
 import torch
 from torch import nn, einsum
@@ -12,6 +12,7 @@ from einops import rearrange, repeat
 from vector_quantize_pytorch import ResidualVQ
 
 from audiolm_pytorch.vq_wav2vec import FairseqVQWav2Vec
+from audiolm_pytorch.hubert_kmeans import HubertWithKmeans
 
 # helper functions
 
@@ -551,7 +552,7 @@ class SemanticTransformer(nn.Module):
         *,
         num_semantic_tokens,
         dim,
-        wav2vec: Optional[FairseqVQWav2Vec] = None,
+        wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
         **kwargs
     ):
         super().__init__()
@@ -574,8 +575,8 @@ class SemanticTransformer(nn.Module):
 
         if not exists(ids):
             assert exists(self.wav2vec)
-            ids = self.wav2vec(raw_wave)
-
+            ids = self.wav2vec(raw_wave, flatten = False)
+            
         if return_loss:
             labels, ids = ids.clone(), ids[:, :-1]
 
@@ -606,7 +607,7 @@ class CoarseTransformer(nn.Module):
         codebook_size,
         num_coarse_quantizers,
         dim,
-        wav2vec: Optional[FairseqVQWav2Vec] = None,
+        wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
         **kwargs
     ):
         super().__init__()
@@ -840,7 +841,7 @@ class CoarseTransformerWrapper(nn.Module):
         *,
         transformer: FineTransformer,
         soundstream: Optional[SoundStream]  = None,
-        wav2vec: Optional[FairseqVQWav2Vec] = None,
+        wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
         num_coarse_quantize = 3
     ):
         super().__init__()
@@ -866,7 +867,7 @@ class CoarseTransformerWrapper(nn.Module):
 
         if not exists(semantic_token_ids):
             assert exists(self.wav2vec), 'VQWav2Vec must be be provided if given raw wave for training'
-            semantic_token_ids = self.wav2vec(raw_wave)
+            semantic_token_ids = self.wav2vec(raw_wave, flatten = False)
 
         if not exists(coarse_token_ids):
             assert exists(self.soundstream), 'SoundStream must be provided if given raw wave for training'
