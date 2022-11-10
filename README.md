@@ -52,6 +52,8 @@ loss.backward()
 
 - <a href="https://ai.facebook.com/">MetaAI</a> for <a href="https://github.com/facebookresearch/fairseq">Fairseq</a> and the liberal license
 
+- <a href="https://github.com/eonglints">@eonglints</a> for offering his professional advice and expertise
+
 ## Todo
 
 - [x] complete CoarseTransformer
