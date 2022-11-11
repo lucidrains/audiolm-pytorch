@@ -48,7 +48,7 @@ loss.backward()
 
 - <a href="https://stability.ai/">Stability.ai</a> for the generous sponsorship to work and open source cutting edge artificial intelligence research
 
-- <a href="https://huggingface.co/">🤗 Huggingface</a> for their amazing accelerate library
+- <a href="https://huggingface.co/">🤗 Huggingface</a> for their amazing accelerate and transformers libraries
 
 - <a href="https://ai.facebook.com/">MetaAI</a> for <a href="https://github.com/facebookresearch/fairseq">Fairseq</a> and the liberal license
 
@@ -58,6 +58,7 @@ loss.backward()
 
 - [x] complete CoarseTransformer
 - [x] use fairseq vq-wav2vec for embeddings
+- [x] add conditioning
 
 - [ ] incorporate ability to use hubert intermediate features as semantic tokens, recommended by <a href="https://github.com/lucidrains/audiolm-pytorch/discussions/13">eonglints</a>
 - [ ] complete full training code for soundstream, taking care of discriminator training
@@ -69,7 +70,8 @@ loss.backward()
 - [ ] offer option to weight tie coarse, fine, and semantic embeddings across the 3 hierarchical transformers
 - [ ] DRY a little at the end
 - [ ] figure out how to suppress logging in fairseq
-- [ ] test with speech synthesis for starters, add conditioning + classifier free guidance as well
+- [ ] test with speech synthesis for starters
+- [ ] add classifier free guidance
 
 ## Citations
 
