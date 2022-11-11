@@ -59,6 +59,7 @@ loss.backward()
 - [x] complete CoarseTransformer
 - [x] use fairseq vq-wav2vec for embeddings
 - [x] add conditioning
+- [x] add classifier free guidance
 
 - [ ] incorporate ability to use hubert intermediate features as semantic tokens, recommended by <a href="https://github.com/lucidrains/audiolm-pytorch/discussions/13">eonglints</a>
 - [ ] complete full training code for soundstream, taking care of discriminator training
@@ -71,7 +72,7 @@ loss.backward()
 - [ ] DRY a little at the end
 - [ ] figure out how to suppress logging in fairseq
 - [ ] test with speech synthesis for starters
-- [ ] add classifier free guidance
+- [ ] abstract out conditioning + classifier free guidance into external module or potentially a package
 
 ## Citations
 
@@ -109,5 +110,22 @@ loss.backward()
     journal = {ArXiv},
     year    = {2019},
     volume  = {abs/1911.02150}
+}
+```
+
+```bibtex
+@article{Ho2022ClassifierFreeDG,
+    title   = {Classifier-Free Diffusion Guidance},
+    author  = {Jonathan Ho},
+    journal = {ArXiv},
+    year    = {2022},
+    volume  = {abs/2207.12598}
+}
+```
+
+```bibtex
+@misc{crowson2022,
+    author  = {Katherine Crowson},
+    url     = {https://twitter.com/rivershavewings}
 }
 ```

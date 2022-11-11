@@ -56,6 +56,19 @@ def gradient_penalty(images, output, weight = 10):
     gradients = rearrange(gradients, 'b ... -> b (...)')
     return weight * ((gradients.norm(2, dim = 1) - 1) ** 2).mean()
 
+# classifier free guidance functions
+
+def uniform(shape, device):
+    return torch.zeros(shape, device = device).float().uniform_(0, 1)
+
+def prob_mask_like(shape, prob, device):
+    if prob == 1:
+        return torch.ones(shape, device = device, dtype = torch.bool)
+    elif prob == 0:
+        return torch.zeros(shape, device = device, dtype = torch.bool)
+    else:
+        return torch.zeros(shape, device = device).float().uniform_(0, 1) < prob
+
 # discriminators
 
 class MultiScaleDiscriminator(nn.Module):
@@ -609,12 +622,14 @@ class SemanticTransformer(nn.Module):
         dim,
         t5_name = DEFAULT_T5_NAME,
         has_condition = False,
+        cond_drop_prob = 0.5,
         wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
         **kwargs
     ):
         super().__init__()
         self.has_condition = has_condition
         self.embed_text = partial(t5_encode_text, name = t5_name)
+        self.cond_drop_prob = cond_drop_prob
 
         self.start_token = nn.Parameter(torch.randn(dim))
 
@@ -631,9 +646,18 @@ class SemanticTransformer(nn.Module):
         ids = None,
         return_loss = False,
         text = None,
-        text_embed = None
+        text_embed = None,
+        cond_drop_prob = None
     ):
         device = next(self.parameters()).device
+
+        assert exists(raw_wave) ^ exists(ids)
+
+        if not exists(ids):
+            assert exists(self.wav2vec)
+            ids = self.wav2vec(raw_wave, flatten = False)
+
+        b = ids.shape[0]
 
         has_text = exists(text) or exists(text_embed)
         assert not (self.has_condition ^ has_text)
@@ -643,12 +667,12 @@ class SemanticTransformer(nn.Module):
                 text_embeds = self.embed_text(text, output_device = device)
                 text_mask = torch.any(text_embeds != 0, dim = -1)
 
-        assert exists(raw_wave) ^ exists(ids)
+        cond_drop_prob = default(cond_drop_prob, self.cond_drop_prob)
 
-        if not exists(ids):
-            assert exists(self.wav2vec)
-            ids = self.wav2vec(raw_wave, flatten = False)
-            
+        if cond_drop_prob > 0:
+            keep_mask = prob_mask_like((b,), 1 - cond_drop_prob, device = device)
+            text_mask = rearrange(keep_mask, 'b -> b 1') & text_mask
+
         if return_loss:
             labels, ids = ids.clone(), ids[:, :-1]
 
@@ -681,12 +705,14 @@ class CoarseTransformer(nn.Module):
         dim,
         t5_name = DEFAULT_T5_NAME,
         has_condition = False,
+        cond_drop_prob = 0.5,
         wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
         **kwargs
     ):
         super().__init__()
         self.has_condition = has_condition
         self.embed_text = partial(t5_encode_text, name = t5_name)
+        self.cond_drop_prob = cond_drop_prob
 
         self.start_token = nn.Parameter(torch.randn(dim))
 
@@ -708,7 +734,8 @@ class CoarseTransformer(nn.Module):
         semantic_token_ids,
         coarse_token_ids,
         text = None,
-        text_embed = None
+        text_embed = None,
+        cond_drop_prob = None
     ):
         b, device = semantic_token_ids.shape[0], semantic_token_ids.device
 
@@ -719,6 +746,12 @@ class CoarseTransformer(nn.Module):
             with torch.no_grad():
                 text_embeds = self.embed_text(text, output_device = device)
                 text_mask = torch.any(text_embeds != 0, dim = -1)
+
+        cond_drop_prob = default(cond_drop_prob, self.cond_drop_prob)
+
+        if cond_drop_prob > 0:
+            keep_mask = prob_mask_like((b,), 1 - cond_drop_prob, device = device)
+            text_mask = rearrange(keep_mask, 'b -> b 1') & text_mask
 
         coarse_token_ids, semantic_token_ids = map(lambda t: rearrange(t, 'b ... -> b (...)'), (coarse_token_ids, semantic_token_ids))
 
@@ -778,11 +811,13 @@ class FineTransformer(nn.Module):
         dim,
         t5_name = DEFAULT_T5_NAME,
         has_condition = False,
+        cond_drop_prob = 0.5,
         **kwargs
     ):
         super().__init__()
         self.has_condition = has_condition
         self.embed_text = partial(t5_encode_text, name = t5_name)
+        self.cond_drop_prob = cond_drop_prob
 
         self.start_token = nn.Parameter(torch.randn(dim))
 
@@ -803,10 +838,10 @@ class FineTransformer(nn.Module):
         coarse_token_ids,
         fine_token_ids,
         text = None,
-        text_embed = None
+        text_embed = None,
+        cond_drop_prob = None
     ):
-        device = coarse_token_ids.device
-
+        b, device = coarse_token_ids.shape[0], coarse_token_ids.device
         has_text = exists(text) or exists(text_embed)
         assert not (self.has_condition ^ has_text)
 
@@ -814,6 +849,12 @@ class FineTransformer(nn.Module):
             with torch.no_grad():
                 text_embeds = self.embed_text(text, output_device = device)
                 text_mask = torch.any(text_embeds != 0, dim = -1)
+
+        cond_drop_prob = default(cond_drop_prob, self.cond_drop_prob)
+
+        if cond_drop_prob > 0:
+            keep_mask = prob_mask_like((b,), 1 - cond_drop_prob, device = device)
+            text_mask = rearrange(keep_mask, 'b -> b 1') & text_mask
 
         coarse_token_ids, fine_token_ids = map(lambda t: rearrange(t, 'b ... -> b (...)'), (coarse_token_ids, fine_token_ids))
 
