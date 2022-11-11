@@ -73,6 +73,7 @@ loss.backward()
 - [ ] figure out how to suppress logging in fairseq
 - [ ] test with speech synthesis for starters
 - [ ] abstract out conditioning + classifier free guidance into external module or potentially a package
+- [ ] add option to use flash attention
 
 ## Citations
 
