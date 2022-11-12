@@ -1112,7 +1112,7 @@ class CoarseTransformerWrapper(nn.Module):
         coarse_logits, semantic_logits = map(lambda t: rearrange(t, 'b n c -> b c n'), (coarse_logits, semantic_logits))
 
         if self.unique_consecutive:
-            num_coarse_logits, num_semantic_logits = coarse_logits.shape[0] * coarse_logits.shape[-1], self_attn_mask.sum()
+            num_coarse_logits, num_semantic_logits = coarse_labels.numel(), (semantic_labels != self.pad_id).sum()
         else:
             num_coarse_logits, num_semantic_logits = coarse_logits.shape[-1], semantic_logits.shape[-1]
 
