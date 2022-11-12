@@ -60,12 +60,14 @@ loss.backward()
 - [x] use fairseq vq-wav2vec for embeddings
 - [x] add conditioning
 - [x] add classifier free guidance
+- [x] add unique consecutive for 
+- [x] incorporate ability to use hubert intermediate features as semantic tokens, recommended by <a href="https://github.com/lucidrains/audiolm-pytorch/discussions/13">eonglints</a>
+- [x] accommodate variable lengthed audio, bring in eos token
 
-- [ ] incorporate ability to use hubert intermediate features as semantic tokens, recommended by <a href="https://github.com/lucidrains/audiolm-pytorch/discussions/13">eonglints</a>
+- [ ] refactor coarse transformer embeddings so that unique_consecutive can be applied to semantic tokens and can be variable lengthed
 - [ ] complete full training code for soundstream, taking care of discriminator training
 - [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
 - [ ] complete sampling code for both Coarse and Fine Transformers, which will be tricky
-- [ ] accommodate variable lengthed audio, bring in eos token
 - [ ] full transformer training code for all three transformers
 - [ ] make sure full inference with or without prompting works on the `AudioLM` class
 - [ ] offer option to weight tie coarse, fine, and semantic embeddings across the 3 hierarchical transformers
