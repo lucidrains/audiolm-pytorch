@@ -611,6 +611,7 @@ class Transformer(nn.Module):
     def forward(
         self,
         x,
+        self_attn_mask = None,
         context = None,
         context_mask = None
     ):
@@ -619,7 +620,7 @@ class Transformer(nn.Module):
         rel_pos_bias = self.rel_pos_bias(n, n, device = device)
 
         for attn, cross_attn, ff in self.layers:
-            x = attn(x, attn_bias = rel_pos_bias) + x
+            x = attn(x, attn_bias = rel_pos_bias, mask = self_attn_mask) + x
 
             if exists(cross_attn):
                 assert exists(context)
@@ -686,7 +687,7 @@ class SemanticTransformer(nn.Module):
         ids = append_eos_id(ids, self.eos_id)
 
         if self.unique_consecutive:
-            ids = batch_unique_consecutive(ids)
+            ids = batch_unique_consecutive(ids, pad_value = self.pad_id)
 
         has_text = exists(text) or exists(text_embed)
         assert not (self.has_condition ^ has_text)
@@ -767,6 +768,7 @@ class CoarseTransformer(nn.Module):
         *,
         semantic_token_ids,
         coarse_token_ids,
+        self_attn_mask = None,
         text = None,
         text_embed = None,
         cond_drop_prob = None
@@ -803,7 +805,7 @@ class CoarseTransformer(nn.Module):
 
         tokens = torch.cat((start_tokens, semantic_tokens, coarse_tokens), dim = 1)
 
-        tokens = self.transformer(tokens, context = text_embeds, context_mask = text_mask)
+        tokens = self.transformer(tokens, context = text_embeds, self_attn_mask = self_attn_mask, context_mask = text_mask)
 
         pred_semantic_tokens, pred_coarse_tokens = tokens[:, :semantic_seq_len], tokens[:, semantic_seq_len:]
 
@@ -1039,15 +1041,16 @@ class CoarseTransformerWrapper(nn.Module):
         soundstream: Optional[SoundStream]  = None,
         wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
         num_coarse_quantize = 3,
-        unique_consecutive = False
+        pad_id = -1,
+        unique_consecutive = True
     ):
         super().__init__()
         self.soundstream = soundstream
         self.wav2vec = wav2vec
 
         self.transformer = transformer
-
-        assert not unique_consecutive, 'not implemented yet'
+        self.unique_consecutive = unique_consecutive
+        self.pad_id = pad_id
 
         assert num_coarse_quantize > 0
         self.num_coarse_quantize = num_coarse_quantize
@@ -1083,13 +1086,23 @@ class CoarseTransformerWrapper(nn.Module):
         coarse_token_ids = append_eos_id(coarse_token_ids, self.transformer.coarse_eos_id)
         semantic_token_ids = append_eos_id(semantic_token_ids, self.transformer.semantic_eos_id)
 
+        if self.unique_consecutive:
+            semantic_token_ids = batch_unique_consecutive(semantic_token_ids, pad_value = self.pad_id)
+
         if return_loss:
             semantic_labels, coarse_labels = semantic_token_ids, coarse_token_ids.clone()
             coarse_token_ids = coarse_token_ids[:, :-1]
 
+        self_attn_mask = None
+        if self.unique_consecutive:
+            self_attn_mask = semantic_token_ids != -1
+            semantic_token_ids = semantic_token_ids.masked_fill(~self_attn_mask, 0)
+            self_attn_mask = F.pad(self_attn_mask, (1, coarse_token_ids.shape[-1]), value = True)
+
         semantic_logits, coarse_logits = self.transformer(
             semantic_token_ids = semantic_token_ids,
             coarse_token_ids = coarse_token_ids,
+            self_attn_mask = self_attn_mask,
             **kwargs
         )
 
@@ -1098,11 +1111,15 @@ class CoarseTransformerWrapper(nn.Module):
 
         coarse_logits, semantic_logits = map(lambda t: rearrange(t, 'b n c -> b c n'), (coarse_logits, semantic_logits))
 
-        num_coarse_logits, num_semantic_logits = coarse_logits.shape[-1], semantic_logits.shape[-1]
+        if self.unique_consecutive:
+            num_coarse_logits, num_semantic_logits = coarse_logits.shape[0] * coarse_logits.shape[-1], self_attn_mask.sum()
+        else:
+            num_coarse_logits, num_semantic_logits = coarse_logits.shape[-1], semantic_logits.shape[-1]
 
         semantic_loss = F.cross_entropy(
             semantic_logits,
-            semantic_labels
+            semantic_labels,
+            ignore_index = self.pad_id
         )
 
         coarse_loss = F.cross_entropy(
