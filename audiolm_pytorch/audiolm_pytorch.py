@@ -1017,6 +1017,8 @@ class FineTransformerWrapper(nn.Module):
 
         coarse_logits, fine_logits = map(lambda t: rearrange(t, 'b n c -> b c n'), (coarse_logits, fine_logits))
 
+        num_coarse_logits, num_fine_logits = coarse_logits.shape[-1], fine_logits.shape[-1]
+
         coarse_loss = F.cross_entropy(
             coarse_logits,
             coarse_labels
@@ -1027,7 +1029,7 @@ class FineTransformerWrapper(nn.Module):
             fine_labels
         )
 
-        return (coarse_loss + fine_loss) * 0.5
+        return (coarse_loss * num_coarse_logits + fine_loss * num_fine_logits) / (num_coarse_logits + num_fine_logits)
 
 class CoarseTransformerWrapper(nn.Module):
     def __init__(
@@ -1096,6 +1098,8 @@ class CoarseTransformerWrapper(nn.Module):
 
         coarse_logits, semantic_logits = map(lambda t: rearrange(t, 'b n c -> b c n'), (coarse_logits, semantic_logits))
 
+        num_coarse_logits, num_semantic_logits = coarse_logits.shape[-1], semantic_logits.shape[-1]
+
         semantic_loss = F.cross_entropy(
             semantic_logits,
             semantic_labels
@@ -1106,7 +1110,7 @@ class CoarseTransformerWrapper(nn.Module):
             coarse_labels
         )
 
-        return (semantic_loss + coarse_loss) * 0.5
+        return (semantic_loss * num_semantic_logits + coarse_loss * num_coarse_logits) / (num_semantic_logits + num_coarse_logits)
 
 # audio LM
 
