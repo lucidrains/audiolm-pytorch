@@ -6,6 +6,9 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
 
+def exists(val):
+    return val is not None
+
 # dataset functions
 
 class SoundDataset(Dataset):
@@ -32,7 +35,7 @@ class SoundDataset(Dataset):
         file = self.files[idx]
         data, _ = sf.read(file)
 
-        if self.seq_len_multiple_of:
+        if exists(self.seq_len_multiple_of):
             mult = self.seq_len_multiple_of
             data_len = len(data)
             data = data[:(data_len // mult * mult)]
