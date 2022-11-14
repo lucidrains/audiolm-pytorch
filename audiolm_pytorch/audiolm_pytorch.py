@@ -359,6 +359,7 @@ class SoundStream(nn.Module):
         x,
         return_encoded = False,
         return_discr_loss = False,
+        return_recons_only = False,
         return_stft_discr_loss = False
     ):
         if x.ndim == 2:
@@ -376,6 +377,9 @@ class SoundStream(nn.Module):
             return x, indices, commit_loss
 
         recon_x = self.decoder(x)
+
+        if return_recons_only:
+            return recon_x
 
         # stft discr loss
 

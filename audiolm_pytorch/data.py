@@ -1,10 +1,12 @@
 from pathlib import Path
 from functools import partial
-import soundfile as sf
+import torchaudio
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
+
+from einops import rearrange
 
 def exists(val):
     return val is not None
@@ -33,14 +35,16 @@ class SoundDataset(Dataset):
 
     def __getitem__(self, idx):
         file = self.files[idx]
-        data, _ = sf.read(file)
+        data, samplerate = torchaudio.load(file)
+
+        data = rearrange(data, '1 ... -> ...')
 
         if exists(self.seq_len_multiple_of):
             mult = self.seq_len_multiple_of
             data_len = len(data)
             data = data[:(data_len // mult * mult)]
 
-        return torch.from_numpy(data).float()
+        return data.float()
 
 # dataloader functions
 

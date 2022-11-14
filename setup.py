@@ -23,7 +23,6 @@ setup(
     'ema-pytorch',
     'fairseq',
     'joblib',
-    'soundfile',
     'torch>=1.6',
     'torchaudio',
     'transformers',
