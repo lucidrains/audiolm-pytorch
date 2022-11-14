@@ -23,7 +23,9 @@ setup(
     'ema-pytorch',
     'fairseq',
     'joblib',
+    'soundfile',
     'torch>=1.6',
+    'torchaudio',
     'transformers',
     'vector-quantize-pytorch>=0.10.5'
   ],
