@@ -1,4 +1,5 @@
 import math
+import functools
 from functools import partial
 from typing import Optional, Union
 
@@ -298,6 +299,7 @@ class SoundStream(nn.Module):
     ):
         super().__init__()
         self.single_channel = input_channels == 1
+        self.strides = strides
 
         layer_channels = tuple(map(lambda t: t * channels, channel_mults))
         layer_channels = (channels, *layer_channels)
@@ -347,6 +349,10 @@ class SoundStream(nn.Module):
         self.recon_loss_weight = recon_loss_weight
         self.adversarial_loss_weight = adversarial_loss_weight
         self.feature_loss_weight = feature_loss_weight
+
+    @property
+    def seq_len_multiple_of(self):
+        return functools.reduce(lambda x, y: x * y, self.strides)
 
     def forward(
         self,

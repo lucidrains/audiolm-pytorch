@@ -12,7 +12,8 @@ class SoundDataset(Dataset):
     def __init__(
         self,
         folder,
-        exts = ['flac', 'wav']
+        exts = ['flac', 'wav'],
+        seq_len_multiple_of = None
     ):
         super().__init__()
         path = Path(folder)
@@ -20,7 +21,9 @@ class SoundDataset(Dataset):
 
         files = [file for ext in exts for file in path.glob(f'**/*.{ext}')]
         assert len(files) > 0, 'no sound files found'
+
         self.files = files
+        self.seq_len_multiple_of = seq_len_multiple_of
 
     def __len__(self):
         return len(self.files)
@@ -28,7 +31,13 @@ class SoundDataset(Dataset):
     def __getitem__(self, idx):
         file = self.files[idx]
         data, _ = sf.read(file)
-        return torch.from_numpy(data)
+
+        if self.seq_len_multiple_of:
+            mult = self.seq_len_multiple_of
+            data_len = len(data)
+            data = data[:(data_len // mult * mult)]
+
+        return torch.from_numpy(data).float()
 
 # dataloader functions
 
