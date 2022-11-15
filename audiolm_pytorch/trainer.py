@@ -98,9 +98,9 @@ class SoundStreamTrainer(nn.Module):
 
         self.optim = get_optimizer(soundstream.non_discr_parameters(), lr = lr, wd = wd)
 
-        for ind, discr in enumerate(soundstream.discriminators):
+        for discr_optimizer_key, discr in self.multiscale_discriminator_iter():
             one_multiscale_discr_optimizer = get_optimizer(discr.parameters(), lr = lr, wd = wd)
-            setattr(self, f'multiscale_discr_optimizer_{ind}', one_multiscale_discr_optimizer)
+            setattr(self, discr_optimizer_key, one_multiscale_discr_optimizer)
 
         self.discr_optim = get_optimizer(soundstream.stft_discriminator.parameters(), lr = lr, wd = wd)
 
@@ -150,6 +150,15 @@ class SoundStreamTrainer(nn.Module):
             self.valid_dl
         )
 
+        # prepare the multiscale discriminators with accelerator
+
+        for name, _ in self.multiscale_discriminator_iter():
+            optimizer = getattr(self, name)
+            optimizer = self.accelerator.prepare(optimizer)
+            setattr(self, name, optimizer)
+
+        # dataloader iterators
+
         self.dl_iter = cycle(self.dl)
         self.valid_dl_iter = cycle(self.valid_dl)
 
@@ -164,6 +173,10 @@ class SoundStreamTrainer(nn.Module):
             rmtree(str(self.results_folder))
 
         self.results_folder.mkdir(parents = True, exist_ok = True)
+
+    def multiscale_discriminator_iter(self):
+        for ind, discr in enumerate(self.soundstream.discriminators):
+            yield f'multiscale_discr_optimizer_{ind}', discr
 
     def print(self, msg):
         self.accelerator.print(msg)
