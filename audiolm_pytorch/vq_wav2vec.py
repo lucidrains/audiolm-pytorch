@@ -17,11 +17,11 @@ class FairseqVQWav2Vec(nn.Module):
     def __init__(
         self,
         checkpoint_path,
-        target_sample_khz = 24000,
+        target_sample_hz = 24000,
         seq_len_multiple_of = None
     ):
         super().__init__()
-        self.target_sample_khz = target_sample_khz
+        self.target_sample_hz = target_sample_hz
         self.seq_len_multiple_of = seq_len_multiple_of
 
         path = Path(checkpoint_path)
@@ -47,10 +47,10 @@ class FairseqVQWav2Vec(nn.Module):
         self,
         wav_input,
         flatten = True,
-        input_sample_khz = None
+        input_sample_hz = None
     ):
-        if exists(input_sample_khz):
-            wav_input = resample(wav_input, input_sample_khz, self.target_sample_khz)
+        if exists(input_sample_hz):
+            wav_input = resample(wav_input, input_sample_hz, self.target_sample_hz)
 
         if exists(self.seq_len_multiple_of):
             wav_input = curtail_to_multiple(wav_input, self.seq_len_multiple_of)

@@ -21,7 +21,7 @@ class SoundDataset(Dataset):
         folder,
         exts = ['flac', 'wav'],
         max_length = None,
-        target_sample_khz = None,
+        target_sample_hz = None,
         seq_len_multiple_of = None
     ):
         super().__init__()
@@ -34,7 +34,7 @@ class SoundDataset(Dataset):
         self.files = files
         self.max_length = max_length
 
-        self.target_sample_khz = target_sample_khz
+        self.target_sample_hz = target_sample_hz
         self.seq_len_multiple_of = seq_len_multiple_of
 
     def __len__(self):
@@ -42,12 +42,12 @@ class SoundDataset(Dataset):
 
     def __getitem__(self, idx):
         file = self.files[idx]
-        data, sample_khz = torchaudio.load(file)
+        data, sample_hz = torchaudio.load(file)
 
         data = rearrange(data, '1 ... -> ...')
 
-        if exists(self.target_sample_khz):
-            data = torchaudio.functional.resample(data, sample_khz, self.target_sample_khz)
+        if exists(self.target_sample_hz):
+            data = torchaudio.functional.resample(data, sample_hz, self.target_sample_hz)
 
         if exists(self.max_length):
             data = data[:self.max_length]

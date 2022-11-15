@@ -304,10 +304,10 @@ class SoundStream(nn.Module):
         feature_loss_weight = 100,
         quantize_dropout = True,
         quantize_dropout_cutoff_index = 0,
-        target_sample_khz = 24000
+        target_sample_hz = 24000
     ):
         super().__init__()
-        self.target_sample_khz = target_sample_khz # for resampling on the fly
+        self.target_sample_hz = target_sample_hz # for resampling on the fly
 
         self.single_channel = input_channels == 1
         self.strides = strides
@@ -375,10 +375,10 @@ class SoundStream(nn.Module):
         return_discr_loss = False,
         return_discr_losses_separately = False,
         return_recons_only = False,
-        input_sample_khz = None
+        input_sample_hz = None
     ):
-        if exists(input_sample_khz):
-            x = resample(x, input_sample_khz, self.target_sample_khz)
+        if exists(input_sample_hz):
+            x = resample(x, input_sample_hz, self.target_sample_hz)
 
         x = curtail_to_multiple(x, self.seq_len_multiple_of)
 
