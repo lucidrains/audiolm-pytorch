@@ -4,7 +4,7 @@
 
 Implementation of <a href="https://google-research.github.io/seanet/audiolm/examples/">AudioLM</a>, a Language Modeling Approach to Audio Generation out of Google Research, in Pytorch
 
-It also extends the work for conditioning with classifier free guidance with T5. This allows for one to do text-to-audio, not offered in the paper.
+It also extends the work for conditioning with classifier free guidance with T5. This allows for one to do text-to-audio or TTS, not offered in the paper.
 
 ## Install
 
