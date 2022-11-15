@@ -17,6 +17,7 @@ from audiolm_pytorch.vq_wav2vec import FairseqVQWav2Vec
 from audiolm_pytorch.hubert_kmeans import HubertWithKmeans
 
 from audiolm_pytorch.t5 import t5_encode_text, get_encoded_dim, DEFAULT_T5_NAME
+from audiolm_pytorch.utils import curtail_to_multiple
 
 from torchaudio.functional import resample
 
@@ -373,6 +374,8 @@ class SoundStream(nn.Module):
     ):
         if exists(input_sample_khz):
             x = resample(x, input_sample_khz, self.target_sample_khz)
+
+        x = curtail_to_multiple(x, self.seq_len_multiple_of)
 
         if x.ndim == 2:
             x = rearrange(x, 'b n -> b 1 n')

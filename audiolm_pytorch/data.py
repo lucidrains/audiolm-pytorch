@@ -6,6 +6,8 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
 
+from audiolm_pytorch.utils import curtail_to_multiple
+
 from einops import rearrange
 
 def exists(val):
@@ -45,9 +47,7 @@ class SoundDataset(Dataset):
             data = data[:self.max_length]
 
         if exists(self.seq_len_multiple_of):
-            mult = self.seq_len_multiple_of
-            data_len = len(data)
-            data = data[:(data_len // mult * mult)]
+            data = curtail_to_multiple(data, self.seq_len_multiple_of)
 
         return data.float()
 

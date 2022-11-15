@@ -9,6 +9,8 @@ import fairseq
 
 from torchaudio.functional import resample
 
+from audiolm_pytorch.utils import curtail_to_multiple
+
 def exists(val):
     return val is not None
 
@@ -17,10 +19,12 @@ class HubertWithKmeans(nn.Module):
         self,
         checkpoint_path,
         kmeans_path,
-        target_sample_khz = 50000
+        target_sample_khz = 50000,
+        seq_len_multiple_of = None
     ):
         super().__init__()
         self.target_sample_khz = target_sample_khz
+        self.seq_len_multiple_of = seq_len_multiple_of
 
         model_path = Path(checkpoint_path)
         kmeans_path = Path(kmeans_path)
@@ -57,6 +61,9 @@ class HubertWithKmeans(nn.Module):
 
         if exists(input_sample_khz):
             wav_input = resample(wav_input, input_sample_khz, self.target_sample_khz)
+
+        if exists(self.seq_len_multiple_of):
+            wav_input = curtail_to_multiple(wav_input, self.seq_len_multiple_of)
 
         embed = self.model(wav_input, features_only = True)
         embed, packed_shape = pack([embed['x']], '* d')
