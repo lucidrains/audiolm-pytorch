@@ -7,13 +7,21 @@ from einops import rearrange, pack, unpack
 import joblib
 import fairseq
 
+from torchaudio.functional import resample
+
+def exists(val):
+    return val is not None
+
 class HubertWithKmeans(nn.Module):
     def __init__(
         self,
         checkpoint_path,
-        kmeans_path
+        kmeans_path,
+        target_sample_khz = 50000
     ):
         super().__init__()
+        self.target_sample_khz = target_sample_khz
+
         model_path = Path(checkpoint_path)
         kmeans_path = Path(kmeans_path)
 
@@ -39,8 +47,16 @@ class HubertWithKmeans(nn.Module):
         return self.kmeans.n_clusters
 
     @torch.no_grad()
-    def forward(self, wav_input, flatten = True):
+    def forward(
+        self,
+        wav_input,
+        flatten = True,
+        input_sample_khz = None
+    ):
         device = wav_input.device
+
+        if exists(input_sample_khz):
+            wav_input = resample(wav_input, input_sample_khz, self.target_sample_khz)
 
         embed = self.model(wav_input, features_only = True)
         embed, packed_shape = pack([embed['x']], '* d')
