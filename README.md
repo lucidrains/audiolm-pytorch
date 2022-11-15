@@ -76,6 +76,7 @@ loss.backward()
 - [ ] test with speech synthesis for starters
 - [ ] abstract out conditioning + classifier free guidance into external module or potentially a package
 - [ ] add option to use flash attention
+- [ ] function for pretty printing all discriminator losses to log
 
 ## Citations
 

@@ -350,6 +350,9 @@ class SoundStream(nn.Module):
         self.adversarial_loss_weight = adversarial_loss_weight
         self.feature_loss_weight = feature_loss_weight
 
+    def non_discr_parameters(self):
+        return [*self.encoder.parameters(), *self.decoder.parameters()]
+
     @property
     def seq_len_multiple_of(self):
         return functools.reduce(lambda x, y: x * y, self.strides)
@@ -359,8 +362,8 @@ class SoundStream(nn.Module):
         x,
         return_encoded = False,
         return_discr_loss = False,
-        return_recons_only = False,
-        return_stft_discr_loss = False
+        return_discr_losses_separately = False,
+        return_recons_only = False
     ):
         if x.ndim == 2:
             x = rearrange(x, 'b n -> b 1 n')
@@ -381,20 +384,18 @@ class SoundStream(nn.Module):
         if return_recons_only:
             return recon_x
 
-        # stft discr loss
-
-        if return_stft_discr_loss:
-            assert self.single_channel
-            real, fake = orig_x, recon_x.detach()
-            stft_real_logits, stft_fake_logits = map(self.stft_discriminator, (real, fake))
-            stft_discr_loss = (hinge_discr_loss(stft_fake_logits.real, stft_real_logits.real) + hinge_discr_loss(stft_fake_logits.imag, stft_real_logits.imag)) / 2
-            return stft_discr_loss
-
         # multi-scale discriminator loss
 
         if return_discr_loss:
             real, fake = orig_x, recon_x.detach()
+
+            stft_discr_loss = None
             discr_losses = []
+
+            if self.single_channel:
+                real, fake = orig_x, recon_x.detach()
+                stft_real_logits, stft_fake_logits = map(self.stft_discriminator, (real, fake))
+                stft_discr_loss = (hinge_discr_loss(stft_fake_logits.real, stft_real_logits.real) + hinge_discr_loss(stft_fake_logits.imag, stft_real_logits.imag)) / 2
 
             for discr, scale in zip(self.discriminators, self.discr_multi_scales):
                 scaled_real, scaled_fake = map(lambda t: F.interpolate(t, scale_factor = scale), (real, fake))
@@ -403,7 +404,24 @@ class SoundStream(nn.Module):
                 one_discr_loss = hinge_discr_loss(fake_logits, real_logits)
                 discr_losses.append(one_discr_loss)
 
-            return torch.stack(discr_losses).mean()
+            if not return_discr_losses_separately:
+                all_discr_losses = torch.stack(discr_losses).mean()
+
+                if exists(stft_discr_loss):
+                    all_discr_losses = all_discr_losses + stft_discr_loss
+
+                return all_discr_losses
+
+            # return a list of discriminator losses with List[Tuple[str, Tensor]]
+
+            discr_losses_pkg = []
+
+            discr_losses_pkg.extend([(f'scale:{scale}', multi_scale_loss) for scale, multi_scale_loss in zip(self.discr_multi_scales, discr_losses)])
+
+            if exists(stft_discr_loss):
+                discr_losses_pkg.append(('stft', stft_discr_loss))
+
+            return discr_losses_pkg
 
         # recon loss
 

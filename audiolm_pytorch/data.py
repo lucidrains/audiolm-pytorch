@@ -18,6 +18,7 @@ class SoundDataset(Dataset):
         self,
         folder,
         exts = ['flac', 'wav'],
+        max_length = None,
         seq_len_multiple_of = None
     ):
         super().__init__()
@@ -28,6 +29,7 @@ class SoundDataset(Dataset):
         assert len(files) > 0, 'no sound files found'
 
         self.files = files
+        self.max_length = max_length
         self.seq_len_multiple_of = seq_len_multiple_of
 
     def __len__(self):
@@ -38,6 +40,9 @@ class SoundDataset(Dataset):
         data, samplerate = torchaudio.load(file)
 
         data = rearrange(data, '1 ... -> ...')
+
+        if exists(self.max_length):
+            data = data[:self.max_length]
 
         if exists(self.seq_len_multiple_of):
             mult = self.seq_len_multiple_of

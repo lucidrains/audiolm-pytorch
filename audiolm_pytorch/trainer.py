@@ -64,6 +64,7 @@ class SoundStreamTrainer(nn.Module):
         *,
         num_train_steps,
         batch_size,
+        data_max_length = None,
         folder,
         lr = 3e-4,
         grad_accum_every = 1,
@@ -93,14 +94,17 @@ class SoundStreamTrainer(nn.Module):
         self.batch_size = batch_size
         self.grad_accum_every = grad_accum_every
 
-        all_parameters = set(soundstream.parameters())
-        discr_parameters = set(soundstream.stft_discriminator.parameters())
-        soundstream_parameters = all_parameters - discr_parameters
+        # optimizers
 
-        self.soundstream_parameters = soundstream_parameters
+        self.optim = get_optimizer(soundstream.non_discr_parameters(), lr = lr, wd = wd)
 
-        self.optim = get_optimizer(soundstream_parameters, lr = lr, wd = wd)
-        self.discr_optim = get_optimizer(discr_parameters, lr = lr, wd = wd)
+        for ind, discr in enumerate(soundstream.discriminators):
+            one_multiscale_discr_optimizer = get_optimizer(discr.parameters(), lr = lr, wd = wd)
+            setattr(self, f'multiscale_discr_optimizer_{ind}', one_multiscale_discr_optimizer)
+
+        self.discr_optim = get_optimizer(soundstream.stft_discriminator.parameters(), lr = lr, wd = wd)
+
+        # max grad norm
 
         self.max_grad_norm = max_grad_norm
         self.discr_max_grad_norm = discr_max_grad_norm
@@ -109,6 +113,7 @@ class SoundStreamTrainer(nn.Module):
 
         self.ds = SoundDataset(
             folder,
+            max_length = data_max_length,
             seq_len_multiple_of = soundstream.seq_len_multiple_of
         )
 
@@ -211,26 +216,36 @@ class SoundStreamTrainer(nn.Module):
 
         # update discriminator
 
-        if exists(self.soundstream.stft_discriminator):
-            for _ in range(self.grad_accum_every):
-                wave = next(self.dl_iter)
-                wave = wave.to(device)
+        for _ in range(self.grad_accum_every):
+            wave = next(self.dl_iter)
+            wave = wave.to(device)
 
-                loss = self.soundstream(wave, return_discr_loss = True)
+            discr_losses = self.soundstream(
+                wave,
+                return_discr_loss = True,
+                return_discr_losses_separately = True
+            )
 
-                self.accelerator.backward(loss / self.grad_accum_every)
+            for name, discr_loss in discr_losses:
+                self.accelerator.backward(discr_loss / self.grad_accum_every)
+                accum_log(logs, {name: discr_loss.item() / self.grad_accum_every})
 
-                accum_log(logs, {'discr_loss': loss.item() / self.grad_accum_every})
+        if exists(self.discr_max_grad_norm):
+            self.accelerator.clip_grad_norm_(self.soundstream.stft_discriminator.parameters(), self.discr_max_grad_norm)
 
-            if exists(self.discr_max_grad_norm):
-                self.accelerator.clip_grad_norm_(self.soundstream.stft_discriminator.parameters(), self.discr_max_grad_norm)
+        # gradient step for all discriminators
 
-            self.discr_optim.step()
-            self.discr_optim.zero_grad()
+        self.discr_optim.step()
+        self.discr_optim.zero_grad()
 
-            # log
+        for ind in range(len(self.soundstream.discriminators)):
+            discr_optimizer = getattr(self, f'multiscale_discr_optimizer_{ind}')
+            discr_optimizer.step()
+            discr_optimizer.zero_grad()
 
-            self.print(f"{steps}: soundstream loss: {logs['loss']} - discr loss: {logs['discr_loss']}")
+        # log
+
+        self.print(f"{steps}: soundstream loss: {logs['loss']}")
 
         # update exponential moving averaged generator
 
