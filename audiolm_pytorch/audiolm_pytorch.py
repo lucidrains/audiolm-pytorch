@@ -109,7 +109,7 @@ class MultiScaleDiscriminator(nn.Module):
             chan_out = min(curr_channels * 4, chan_max)
 
             self.conv_layers.append(nn.Sequential(
-                nn.Conv1d(curr_channels, chan_out, 8, stride = 4, padding = 4),
+                nn.Conv1d(curr_channels, chan_out, 8, stride = 4, padding = 4, groups = groups),
                 leaky_relu()
             ))
 
