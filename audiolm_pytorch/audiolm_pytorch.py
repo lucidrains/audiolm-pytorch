@@ -267,8 +267,8 @@ class SemanticTransformer(nn.Module):
     def __init__(
         self,
         *,
-        num_semantic_tokens,
         dim,
+        num_semantic_tokens = None,
         t5_name = DEFAULT_T5_NAME,
         has_condition = False,
         cond_drop_prob = 0.5,
@@ -279,6 +279,12 @@ class SemanticTransformer(nn.Module):
         **kwargs
     ):
         super().__init__()
+        assert exists(wav2vec) or exists(num_semantic_tokens)
+
+        if exists(wav2vec):
+            num_semantic_tokens = default(num_semantic_tokens, wav2vec.codebook_size)
+            assert num_semantic_tokens == wav2vec.codebook_size
+
         self.has_condition = has_condition
         self.embed_text = partial(t5_encode_text, name = t5_name)
         self.cond_drop_prob = cond_drop_prob
@@ -362,10 +368,10 @@ class CoarseTransformer(nn.Module):
     def __init__(
         self,
         *,
-        num_semantic_tokens,
         codebook_size,
         num_coarse_quantizers,
         dim,
+        num_semantic_tokens = None,
         t5_name = DEFAULT_T5_NAME,
         has_condition = False,
         cond_drop_prob = 0.5,
@@ -374,6 +380,12 @@ class CoarseTransformer(nn.Module):
         **kwargs
     ):
         super().__init__()
+        assert exists(wav2vec) or exists(num_semantic_tokens)
+
+        if exists(wav2vec):
+            num_semantic_tokens = default(num_semantic_tokens, wav2vec.codebook_size)
+            assert num_semantic_tokens == wav2vec.codebook_size
+
         self.has_condition = has_condition
         self.embed_text = partial(t5_encode_text, name = t5_name)
         self.cond_drop_prob = cond_drop_prob

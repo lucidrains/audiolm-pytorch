@@ -14,14 +14,109 @@ $ pip install audiolm-pytorch
 
 ## Usage
 
+First, `SoundStream` needs to be trained on a large corpus of audio data
+
 ```python
-import torch
-from audiolm_pytorch.audiolm_pytorch import SoundStream, AudioLM, FineTransformer, FineTransformerWrapper
+from audiolm_pytorch import SoundStream, SoundStreamTrainer
 
 soundstream = SoundStream(
     codebook_size = 1024,
     rq_num_quantizers = 8,
 )
+
+trainer = SoundStreamTrainer(
+    soundstream,
+    folder = '/path/to/librispeech',
+    batch_size = 4,
+    data_max_length = 320 * 32,
+    num_train_steps = 10000
+).cuda()
+
+trainer.train()
+```
+
+Then three separate transformers (`SemanticTransformer`, `CoarseTransformer`, `FineTransformer`) need to be trained
+
+
+ex. `SemanticTransformer`
+
+```python
+import torch
+from audiolm_pytorch import HubertWithKmeans, SemanticTransformer
+
+wav2vec = HubertWithKmeans(
+    checkpoint_path = './hubert/hubert_base_ls960.pt',
+    kmeans_path = './hubert/hubert_base_ls960_L9_km500.bin'
+)
+
+semantic_transformer = SemanticTransformer(
+    wav2vec = wav2vec,
+    dim = 1024,
+    depth = 6
+).cuda()
+
+wave = torch.randn(1, 320 * 512).cuda()
+
+loss = semantic_transformer(
+    raw_wave = wave,
+    return_loss = True
+)
+
+loss.backward()
+```
+
+ex. `CoarseTransformer`
+
+```python
+import torch
+from audiolm_pytorch import HubertWithKmeans, SoundStream, CoarseTransformer, CoarseTransformerWrapper
+
+wav2vec = HubertWithKmeans(
+    checkpoint_path = './hubert/hubert_base_ls960.pt',
+    kmeans_path = './hubert/hubert_base_ls960_L9_km500.bin'
+)
+
+soundstream = SoundStream(
+    codebook_size = 1024,
+    rq_num_quantizers = 8,
+)
+
+coarse_transformer = CoarseTransformer(
+    wav2vec = wav2vec,
+    codebook_size = 1024,
+    num_coarse_quantizers = 3,
+    dim = 512,
+    depth = 6
+)
+
+coarse_wrapper = CoarseTransformerWrapper(
+    wav2vec = wav2vec,
+    soundstream = soundstream,
+    transformer = coarse_transformer
+).cuda()
+
+wave = torch.randn(1, 32 * 320).cuda()
+
+loss = coarse_wrapper(
+    raw_wave = wave,
+    return_loss = True
+)
+
+loss.backward()
+```
+
+ex. `FineTransformer`
+
+```python
+import torch
+from audiolm_pytorch import SoundStream, FineTransformer, FineTransformerWrapper
+
+soundstream = SoundStream(
+    codebook_size = 1024,
+    rq_num_quantizers = 8,
+)
+
+soundstream.load('/path/to/trained/soundstream.pt')
 
 transformer = FineTransformer(
     num_coarse_quantizers = 3,
@@ -36,15 +131,17 @@ train_wrapper = FineTransformerWrapper(
     transformer = transformer
 ).cuda()
 
-raw_waveform = torch.randn(1, 320 * 512).cuda()
+wave = torch.randn(1, 320 * 512).cuda()
 
 loss = train_wrapper(
-    raw_wave = raw_waveform,
+    raw_wave = wave,
     return_loss = True
 )
 
 loss.backward()
 ```
+
+- [ ] show how to generate from prompt tensor or file
 
 ## Appreciation
 
@@ -79,6 +176,7 @@ loss.backward()
 - [ ] abstract out conditioning + classifier free guidance into external module or potentially a package
 - [ ] add option to use flash attention
 - [ ] function for pretty printing all discriminator losses to log
+- [ ] simplify training even more within AudioLM class
 
 ## Citations
 

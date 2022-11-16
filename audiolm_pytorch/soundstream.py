@@ -1,4 +1,5 @@
 import functools
+from pathlib import Path
 from functools import partial
 
 import torch
@@ -308,6 +309,11 @@ class SoundStream(nn.Module):
         self.recon_loss_weight = recon_loss_weight
         self.adversarial_loss_weight = adversarial_loss_weight
         self.feature_loss_weight = feature_loss_weight
+
+    def load(self, path):
+        path = Path(path)
+        assert path.exists()
+        self.load_state_dict(torch.load(str(path)))
 
     def non_discr_parameters(self):
         return [*self.encoder.parameters(), *self.decoder.parameters()]
