@@ -20,7 +20,7 @@ from audiolm_pytorch.optimizer import get_optimizer
 
 from ema_pytorch import EMA
 
-from audiolm_pytorch.audiolm_pytorch import SoundStream
+from audiolm_pytorch.soundstream import SoundStream
 from audiolm_pytorch.data import SoundDataset, get_dataloader
 
 from accelerate import Accelerator
