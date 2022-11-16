@@ -63,6 +63,10 @@ loss = semantic_transformer(
 )
 
 loss.backward()
+
+# after much training above
+
+sample = semantic_transformer.generate(max_length = 128) # (1, < 128) - may terminate early if it detects [eos]
 ```
 
 ex. `CoarseTransformer`
@@ -177,6 +181,7 @@ loss.backward()
 - [ ] abstract out conditioning + classifier free guidance into external module or potentially a package
 - [ ] add option to use flash attention
 - [ ] simplify training even more within AudioLM class
+- [ ] handle when generating semantic tokens, that last logits may not be necessarily the last in the sequence given unique consecutive processing
 
 ## Citations
 
