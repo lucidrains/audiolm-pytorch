@@ -920,7 +920,7 @@ class CoarseTransformerWrapper(nn.Module):
 
         self_attn_mask = None
         if self.unique_consecutive:
-            self_attn_mask = semantic_token_ids != -1
+            self_attn_mask = semantic_token_ids != self.pad_id
             semantic_token_ids = semantic_token_ids.masked_fill(~self_attn_mask, 0)
             self_attn_mask = F.pad(self_attn_mask, (1, coarse_token_ids.shape[-1]), value = True)
 
