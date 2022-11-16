@@ -41,6 +41,39 @@ def round_down_nearest_multiple(val, mult):
 def grad_shrink(t, alpha = 0.1):
     return t * alpha + t.detach() * (1 - alpha)
 
+# sampling helpers
+
+def log(t, eps = 1e-20):
+    return torch.log(t + eps)
+
+def gumbel_noise(t):
+    noise = torch.zeros_like(t).uniform_(0, 1)
+    return -log(-log(noise))
+
+def gumbel_sample(t, temperature = 1., dim = -1):
+    return ((t / temperature) + gumbel_noise(t)).argmax(dim = dim)
+
+def top_k(logits, thres = 0.5):
+    num_logits = logits.shape[-1]
+    k = max(int((1 - thres) * num_logits), 1)
+    val, ind = torch.topk(logits, k)
+    probs = torch.full_like(logits, float('-inf'))
+    probs.scatter_(1, ind, val)
+    return probs
+
+def mask_out_after_eos_id(t, eos_id, mask_value = -1, include_eos = True):
+    eos_mask = (t == eos_id).float()
+
+    if include_eos:
+        eos_mask = F.pad(eos_mask, (1, -1))
+
+    after_eos_mask = eos_mask.cumsum(dim = -1) > 0
+    return t.masked_fill(after_eos_mask, mask_value)
+
+def all_rows_have_eos_id(t, eos_id):
+    eos_mask = (t == eos_id)
+    return torch.any(eos_mask, dim = -1).all()
+
 # classifier free guidance functions
 
 def prob_mask_like(shape, prob, device):

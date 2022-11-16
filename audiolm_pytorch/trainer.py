@@ -256,9 +256,20 @@ class SoundStreamTrainer(nn.Module):
             discr_optimizer.step()
             discr_optimizer.zero_grad()
 
+        # build pretty printed losses
+
+        losses_str = f"{steps}: soundstream loss: {logs['loss']}"
+
+        for key, loss in logs.items():
+            if not key.startswith('scale:'):
+                continue
+            _, scale_factor = key.split(':')
+
+            losses_str += f" | discr (scale {scale_factor}) loss: {loss:.2f}"
+
         # log
 
-        self.print(f"{steps}: soundstream loss: {logs['loss']}")
+        self.print(losses_str)
 
         # update exponential moving averaged generator
 

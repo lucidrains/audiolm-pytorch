@@ -163,6 +163,7 @@ loss.backward()
 - [x] incorporate ability to use hubert intermediate features as semantic tokens, recommended by <a href="https://github.com/lucidrains/audiolm-pytorch/discussions/13">eonglints</a>
 - [x] accommodate variable lengthed audio, bring in eos token
 - [x] make sure unique consecutive works with coarse transformer
+- [x] pretty printing all discriminator losses to log
 
 - [ ] complete full training code for soundstream, taking care of discriminator training
 - [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
@@ -175,7 +176,6 @@ loss.backward()
 - [ ] test with speech synthesis for starters
 - [ ] abstract out conditioning + classifier free guidance into external module or potentially a package
 - [ ] add option to use flash attention
-- [ ] function for pretty printing all discriminator losses to log
 - [ ] simplify training even more within AudioLM class
 
 ## Citations
