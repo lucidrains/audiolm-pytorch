@@ -390,8 +390,12 @@ class SemanticTransformer(nn.Module):
 
         # start length and get running id output
 
+        batch = ids.shape[0]
         start_length = ids.shape[-1]
         output = ids.clone()
+
+        batch_range = rearrange(torch.arange(batch, device = device), 'b -> b 1')
+        last_logit_indices = (ids != self.pad_id).sum(dim = -1).long()
 
         # sample from transformer
 
@@ -403,7 +407,10 @@ class SemanticTransformer(nn.Module):
                 **kwargs
             )
 
-            last_logits = logits[:, -1]
+            last_logits = logits[batch_range, last_logit_indices]
+
+            last_logits = rearrange(last_logits, 'b 1 c -> b c')
+
             filtered_logits = top_k(last_logits, thres = filter_thres)
             sampled = gumbel_sample(filtered_logits, temperature = temperature, dim = -1)
 
@@ -413,7 +420,9 @@ class SemanticTransformer(nn.Module):
             if all_rows_have_eos_id(output, self.eos_id):
                 break
 
-        output = mask_out_after_eos_id(output, self.pad_id)
+            last_logit_indices += 1
+
+        output = mask_out_after_eos_id(output, self.pad_id, include_eos = False)
         return output
 
     def forward_with_cond_scale(

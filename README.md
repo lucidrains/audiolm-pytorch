@@ -168,6 +168,7 @@ loss.backward()
 - [x] accommodate variable lengthed audio, bring in eos token
 - [x] make sure unique consecutive works with coarse transformer
 - [x] pretty printing all discriminator losses to log
+- [x] handle when generating semantic tokens, that last logits may not be necessarily the last in the sequence given unique consecutive processing
 
 - [ ] complete full training code for soundstream, taking care of discriminator training
 - [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
@@ -181,7 +182,6 @@ loss.backward()
 - [ ] abstract out conditioning + classifier free guidance into external module or potentially a package
 - [ ] add option to use flash attention
 - [ ] simplify training even more within AudioLM class
-- [ ] handle when generating semantic tokens, that last logits may not be necessarily the last in the sequence given unique consecutive processing
 
 ## Citations
 
