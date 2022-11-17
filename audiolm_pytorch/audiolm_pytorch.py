@@ -966,6 +966,7 @@ class FineTransformerWrapper(nn.Module):
             fine_token_ids = fine_token_ids[:, :-1]
 
         self_attn_mask = coarse_token_ids != self.pad_id
+        coarse_token_ids = coarse_token_ids.masked_fill(~self_attn_mask, 0)
 
         fine_token_seq_len = fine_token_ids.shape[-1]
         self_attn_mask = F.pad(self_attn_mask, (1, fine_token_seq_len + 1), value = True)
