@@ -107,6 +107,16 @@ loss = coarse_wrapper(
 )
 
 loss.backward()
+
+# after a lot of training
+
+mock_semantic_token_ids = torch.randint(0, wav2vec.codebook_size, (1, 128))
+
+coarse_tokens = coarse_wrapper.generate(
+    semantic_token_ids = mock_semantic_token_ids,
+    max_time_steps = 512
+) # (1, 512, 3) - (batch, time steps, num quantizers)
+
 ```
 
 ex. `FineTransformer`
