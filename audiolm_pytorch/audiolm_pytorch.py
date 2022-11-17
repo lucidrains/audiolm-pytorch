@@ -424,6 +424,18 @@ class SemanticTransformer(nn.Module):
             last_logit_indices += 1
 
         output = mask_out_after_eos_id(output, self.pad_id, include_eos = include_eos_in_output)
+
+        has_eos_mask = (output == self.eos_id).any(dim = -1)
+
+        if not has_eos_mask.all():
+            append_eos_or_pad = torch.where(
+                has_eos_mask,
+                torch.full((batch, 1), self.pad_id, dtype = torch.long, device = device),
+                torch.full((batch, 1), self.eos_id, dtype = torch.long, device = device),
+            )
+
+            output = torch.cat((output, append_eos_or_pad), dim = -1)
+
         return output
 
     def forward_with_cond_scale(
