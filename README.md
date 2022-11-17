@@ -217,6 +217,7 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 - [ ] simplify training even more within AudioLM class
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
 - [ ] refactor so semantic transformer has a wrapper to that handles unique consecutives as well as wav to hubert or vq-wav2vec
+- [ ] validation function within audiolm that ensures all the pieces are compatible
 
 ## Citations
 
