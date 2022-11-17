@@ -1229,7 +1229,8 @@ class AudioLM(nn.Module):
         batch_size = 1,
         text: Optional[List[str]] = None,
         prime_wave = None,
-        max_length = 2048
+        max_length = 2048,
+        return_coarse_generated_wave = False
     ):
         if exists(prime_wave):
             prime_wave = prime_wave.to(self.device)
@@ -1241,14 +1242,18 @@ class AudioLM(nn.Module):
             max_length = max_length
         )
 
-        coarse_token_ids = self.coarse.generate(
+        coarse_token_ids_or_recon_wave = self.coarse.generate(
             text = text,
-            semantic_token_ids = semantic_token_ids
+            semantic_token_ids = semantic_token_ids,
+            reconstruct_wave = return_coarse_generated_wave
         )
+
+        if return_coarse_generated_wave:
+            return coarse_token_ids_or_recon_wave
 
         generated_wave = self.fine.generate(
             text = text,
-            coarse_token_ids = coarse_token_ids,
+            coarse_token_ids = coarse_token_ids_or_recon_wave,
             reconstruct_wave = True
         )
 
