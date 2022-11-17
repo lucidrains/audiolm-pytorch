@@ -155,7 +155,29 @@ loss = train_wrapper(
 loss.backward()
 ```
 
-- [ ] show how to generate from prompt tensor or file
+All together now
+
+```python
+
+audiolm = AudioLM(
+    wav2vec = wav2vec,
+    soundstream = soundstream,
+    semantic_transformer = semantic_transformer,
+    coarse_transformer = coarse_transformer,
+    fine_transformer = transformer
+)
+
+generated_wav = audiolm(batch_size = 1)
+
+# or with priming
+
+generated_wav_with_prime = audiolm(prime_wave = torch.randn(1, 320 * 8))
+
+# or with text condition, if given
+
+generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the distant echos of bells'])
+
+```
 
 ## Appreciation
 
@@ -192,6 +214,7 @@ loss.backward()
 - [ ] abstract out conditioning + classifier free guidance into external module or potentially a package
 - [ ] add option to use flash attention
 - [ ] simplify training even more within AudioLM class
+- [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
 
 ## Citations
 
