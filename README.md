@@ -158,6 +158,7 @@ loss.backward()
 All together now
 
 ```python
+from audiolm_pytorch import AudioLM
 
 audiolm = AudioLM(
     wav2vec = wav2vec,
