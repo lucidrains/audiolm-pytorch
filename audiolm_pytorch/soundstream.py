@@ -251,7 +251,6 @@ class SoundStream(nn.Module):
         recon_loss_weight = 1.,
         adversarial_loss_weight = 1.,
         feature_loss_weight = 100,
-        quantize_dropout = True,
         quantize_dropout_cutoff_index = 0,
         target_sample_hz = 24000
     ):
@@ -282,7 +281,7 @@ class SoundStream(nn.Module):
             codebook_size = codebook_size,
             kmeans_init = True,
             threshold_ema_dead_code = 2,
-            quantize_dropout = quantize_dropout,
+            quantize_dropout = True,
             quantize_dropout_cutoff_index = quantize_dropout_cutoff_index
         )
 
