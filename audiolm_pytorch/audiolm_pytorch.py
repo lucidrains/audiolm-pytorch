@@ -410,6 +410,7 @@ class SemanticTransformer(nn.Module):
             logits = self.forward_with_cond_scale(
                 ids = sample_semantic_ids,
                 text_embeds = text_embeds,
+                unique_consecutive = False,
                 **kwargs
             )
 
@@ -467,9 +468,11 @@ class SemanticTransformer(nn.Module):
         return_loss = False,
         text: Optional[List[str]] = None,
         text_embeds = None,
-        cond_drop_prob = None
+        cond_drop_prob = None,
+        unique_consecutive = None
     ):
         device = self.device
+        unique_consecutive = default(unique_consecutive, self.unique_consecutive)
 
         assert exists(raw_wave) ^ exists(ids)
 
@@ -482,7 +485,7 @@ class SemanticTransformer(nn.Module):
         if self.training:
             ids = append_eos_id(ids, self.eos_id)
 
-        if self.unique_consecutive:
+        if unique_consecutive:
             ids = batch_unique_consecutive(ids, pad_value = self.pad_id)
 
         has_text = exists(text) or exists(text_embeds)
