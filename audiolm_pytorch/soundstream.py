@@ -5,7 +5,7 @@ from functools import partial
 import torch
 from torch import nn, einsum
 import torch.nn.functional as F
-from einops import rearrange
+from einops import rearrange, reduce
 
 from vector_quantize_pytorch import ResidualVQ
 
@@ -309,6 +309,12 @@ class SoundStream(nn.Module):
         self.recon_loss_weight = recon_loss_weight
         self.adversarial_loss_weight = adversarial_loss_weight
         self.feature_loss_weight = feature_loss_weight
+
+    def decode_from_codebook_indices(self, quantized_indices):
+        codes = self.rq.get_codes_from_indices(quantized_indices)
+        x = reduce(codes, 'q ... -> ...', 'sum')
+        x = rearrange(x, 'b n c -> b c n')
+        return self.decoder(x)
 
     def load(self, path):
         path = Path(path)

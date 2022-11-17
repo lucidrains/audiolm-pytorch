@@ -862,7 +862,8 @@ class CoarseTransformerWrapper(nn.Module):
         cond_scale = 3.,
         filter_thres = 0.9,
         temperature = 1.,
-        reshape_output = True
+        reshape_output = True,
+        reconstruct_wave = False
     ):
         batch, device = semantic_token_ids.shape[0], self.device
 
@@ -897,8 +898,14 @@ class CoarseTransformerWrapper(nn.Module):
 
         output = mask_out_after_eos_id(output, self.eos_id, include_eos = False)
 
-        if reshape_output:
+        if reshape_output or reconstruct_wave:
             output = rearrange(output, 'b (n q) -> b n q', q = self.num_coarse_quantizers)
+
+        if reconstruct_wave:
+            assert exists(self.soundstream)
+            wav = self.soundstream.decode_from_codebook_indices(output)
+            wav = rearrange(wav, 'b 1 n -> b n')
+            return wav
 
         return output
 
