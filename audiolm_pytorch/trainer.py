@@ -443,6 +443,9 @@ class SemanticTransformerTrainer(nn.Module):
     def print(self, msg):
         self.accelerator.print(msg)
 
+    def generate(self, *args, **kwargs):
+        return self.train_wrapper.generate(*args, **kwargs)
+
     @property
     def device(self):
         return self.accelerator.device
@@ -636,6 +639,9 @@ class CoarseTransformerTrainer(nn.Module):
 
     def print(self, msg):
         self.accelerator.print(msg)
+
+    def generate(self, *args, **kwargs):
+        return self.train_wrapper.generate(*args, **kwargs)
 
     @property
     def device(self):
@@ -833,6 +839,9 @@ class FineTransformerTrainer(nn.Module):
 
     def print(self, msg):
         self.accelerator.print(msg)
+
+    def generate(self, *args, **kwargs):
+        return self.train_wrapper.generate(*args, **kwargs)
 
     @property
     def device(self):

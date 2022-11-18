@@ -719,6 +719,7 @@ class FineTransformer(nn.Module):
 
 # training wrappers
 
+@typechecked
 class SemanticTransformerWrapper(nn.Module):
     def __init__(
         self,
