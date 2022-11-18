@@ -348,6 +348,14 @@ class SemanticTransformer(nn.Module):
         self.transformer = Transformer(dim = dim, dim_context = get_encoded_dim(t5_name), cross_attend = has_condition, grad_shrink_alpha = grad_shrink_alpha, **kwargs)
         self.to_logits = nn.Linear(dim, num_semantic_tokens + 1)
 
+    def non_wav2vec_parameters(self):
+        return (
+            set([*self.semantic_embedding.parameters()]) |
+            set([self.start_token]) |
+            set([*self.transformer.parameters()]) |
+            set([*self.to_logits.parameters()])
+        )
+
     @property
     def device(self):
         return next(self.parameters()).device
