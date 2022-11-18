@@ -84,6 +84,8 @@ soundstream = SoundStream(
     rq_num_quantizers = 8,
 )
 
+soundstream.load('/path/to/trained/soundstream.pt')
+
 coarse_transformer = CoarseTransformer(
     wav2vec = wav2vec,
     codebook_size = 1024,
@@ -116,9 +118,9 @@ soundstream = SoundStream(
     rq_num_quantizers = 8,
 )
 
-# soundstream.load('/path/to/trained/soundstream.pt')
+soundstream.load('/path/to/trained/soundstream.pt')
 
-transformer = FineTransformer(
+fine_transformer = FineTransformer(
     num_coarse_quantizers = 3,
     num_fine_quantizers = 5,
     codebook_size = 1024,
@@ -127,7 +129,7 @@ transformer = FineTransformer(
 )
 
 trainer = FineTransformerTrainer(
-    transformer = transformer,
+    transformer = fine_transformer,
     soundstream = soundstream,
     folder = '/home/phil/dl/data/LibriSpeech',
     batch_size = 1,
@@ -148,7 +150,7 @@ audiolm = AudioLM(
     soundstream = soundstream,
     semantic_transformer = semantic_transformer,
     coarse_transformer = coarse_transformer,
-    fine_transformer = transformer
+    fine_transformer = fine_transformer
 )
 
 generated_wav = audiolm(batch_size = 1)
