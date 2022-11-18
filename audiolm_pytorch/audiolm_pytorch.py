@@ -315,28 +315,20 @@ class SemanticTransformer(nn.Module):
         self,
         *,
         dim,
-        num_semantic_tokens = None,
+        num_semantic_tokens,
         t5_name = DEFAULT_T5_NAME,
         has_condition = False,
         cond_drop_prob = 0.5,
-        wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
-        unique_consecutive = True,
         grad_shrink_alpha = 0.1,
         pad_id = -1,
         **kwargs
     ):
         super().__init__()
-        assert exists(wav2vec) or exists(num_semantic_tokens)
-
-        if exists(wav2vec):
-            num_semantic_tokens = default(num_semantic_tokens, wav2vec.codebook_size)
-            assert num_semantic_tokens == wav2vec.codebook_size
+        self.num_semantic_tokens = num_semantic_tokens
 
         self.has_condition = has_condition
         self.embed_text = partial(t5_encode_text, name = t5_name)
         self.cond_drop_prob = cond_drop_prob
-
-        self.unique_consecutive = unique_consecutive
 
         self.start_token = nn.Parameter(torch.randn(dim))
 
@@ -344,115 +336,12 @@ class SemanticTransformer(nn.Module):
         self.eos_id = num_semantic_tokens
         self.pad_id = pad_id
 
-        self.wav2vec = wav2vec
         self.transformer = Transformer(dim = dim, dim_context = get_encoded_dim(t5_name), cross_attend = has_condition, grad_shrink_alpha = grad_shrink_alpha, **kwargs)
         self.to_logits = nn.Linear(dim, num_semantic_tokens + 1)
-
-    def non_wav2vec_parameters(self):
-        return (
-            set([*self.semantic_embedding.parameters()]) |
-            set([self.start_token]) |
-            set([*self.transformer.parameters()]) |
-            set([*self.to_logits.parameters()])
-        )
 
     @property
     def device(self):
         return next(self.parameters()).device
-
-    @eval_decorator
-    @torch.no_grad()
-    def generate(
-        self,
-        *,
-        max_length,
-        text: Optional[List[str]] = None,
-        text_embeds = None,
-        prime_wave = None,
-        prime_ids = None,
-        batch_size = 1,
-        cond_scale = 3,
-        filter_thres = 0.9,
-        temperature = 1.,
-        include_eos_in_output = True,  # if doing hierarchical sampling, eos must be kept for an easy time
-        **kwargs
-    ):
-        device = self.device
-
-        # derive wav2vec ids from the input wave
-
-        if exists(prime_wave):
-            assert not exists(prime_ids)
-            assert exists(self.wav2vec)
-            ids = self.wav2vec(prime_wave, flatten = False)
-        elif exists(prime_ids):
-            ids = prime_ids
-        else:
-            ids = torch.empty((batch_size, 0), dtype = torch.long, device = device)
-
-        if self.unique_consecutive:
-            ids = batch_unique_consecutive(ids, pad_value = self.pad_id)
-
-        # derive text embeddings if needed
-
-        has_text = exists(text) or exists(text_embeds)
-        assert not (self.has_condition ^ has_text)
-
-        if not exists(text_embeds) and exists(text):
-            with torch.no_grad():
-                text_embeds = self.embed_text(text, output_device = device)
-
-        # start length and get running id output
-
-        batch = ids.shape[0]
-        start_length = ids.shape[-1]
-        sample_semantic_ids = ids.clone()
-
-        batch_range = rearrange(torch.arange(batch, device = device), 'b -> b 1')
-        last_logit_indices = (ids != self.pad_id).sum(dim = -1).long()
-
-        # sample from transformer
-
-        for ind in tqdm(range(start_length, max_length), desc = 'generating semantic'):
-
-            logits = self.forward_with_cond_scale(
-                ids = sample_semantic_ids,
-                text_embeds = text_embeds,
-                unique_consecutive = False,
-                **kwargs
-            )
-
-            last_logits = logits[batch_range, last_logit_indices]
-
-            last_logits = rearrange(last_logits, 'b 1 c -> b c')
-
-            filtered_logits = top_k(last_logits, thres = filter_thres)
-            sampled = gumbel_sample(filtered_logits, temperature = temperature, dim = -1)
-
-            sampled = rearrange(sampled, 'b -> b 1')
-            sample_semantic_ids = torch.cat((sample_semantic_ids, sampled), dim = -1)
-
-            if all_rows_have_eos_id(sample_semantic_ids, self.eos_id):
-                break
-
-            last_logit_indices += 1
-
-        sample_semantic_ids = mask_out_after_eos_id(sample_semantic_ids, self.pad_id, include_eos = include_eos_in_output)
-
-        # ensure all sequences have eos
-
-        has_eos_mask = (sample_semantic_ids == self.eos_id).any(dim = -1)
-
-        if not has_eos_mask.all():
-            append_eos_or_pad = torch.where(
-                has_eos_mask,
-                torch.full((batch, 1), self.pad_id, dtype = torch.long, device = device),
-                torch.full((batch, 1), self.eos_id, dtype = torch.long, device = device),
-            )
-
-            sample_semantic_ids = torch.cat((sample_semantic_ids, append_eos_or_pad), dim = -1)
-
-        return sample_semantic_ids
 
     def forward_with_cond_scale(
         self,
@@ -471,7 +360,6 @@ class SemanticTransformer(nn.Module):
     def forward(
         self,
         *,
-        raw_wave = None,
         ids = None,
         return_loss = False,
         text: Optional[List[str]] = None,
@@ -480,21 +368,8 @@ class SemanticTransformer(nn.Module):
         unique_consecutive = None
     ):
         device = self.device
-        unique_consecutive = default(unique_consecutive, self.unique_consecutive)
-
-        assert exists(raw_wave) ^ exists(ids)
-
-        if not exists(ids):
-            assert exists(self.wav2vec)
-            ids = self.wav2vec(raw_wave, flatten = False)
 
         b = ids.shape[0]
-
-        if self.training:
-            ids = append_eos_id(ids, self.eos_id)
-
-        if unique_consecutive:
-            ids = batch_unique_consecutive(ids, pad_value = self.pad_id)
 
         has_text = exists(text) or exists(text_embeds)
         assert not (self.has_condition ^ has_text)
@@ -521,18 +396,7 @@ class SemanticTransformer(nn.Module):
         tokens = torch.cat((start_tokens, tokens), dim = 1)
 
         tokens = self.transformer(tokens, context = text_embeds, context_mask = text_mask)
-        logits = self.to_logits(tokens)
-
-        if not return_loss:
-            return logits
-
-        loss = F.cross_entropy(
-            rearrange(logits, 'b n c -> b c n'),
-            labels,
-            ignore_index = self.pad_id
-        )
-
-        return loss
+        return self.to_logits(tokens)
 
 @typechecked
 class CoarseTransformer(nn.Module):
@@ -854,6 +718,167 @@ class FineTransformer(nn.Module):
         return coarse_logits, fine_logits
 
 # training wrappers
+
+class SemanticTransformerWrapper(nn.Module):
+    def __init__(
+        self,
+        *,
+        transformer: SemanticTransformer,
+        wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
+        pad_id = -1,
+        unique_consecutive = True
+    ):
+        super().__init__()
+        self.wav2vec = wav2vec
+        self.transformer = transformer
+        assert self.wav2vec.codebook_size == transformer.num_semantic_tokens
+
+        self.unique_consecutive = unique_consecutive
+        self.pad_id = pad_id
+        self.eos_id = transformer.eos_id
+
+    @property
+    def device(self):
+        return next(self.parameters()).device
+
+    @eval_decorator
+    @torch.no_grad()
+    def generate(
+        self,
+        *,
+        max_length,
+        text: Optional[List[str]] = None,
+        text_embeds = None,
+        prime_wave = None,
+        prime_ids = None,
+        batch_size = 1,
+        cond_scale = 3,
+        filter_thres = 0.9,
+        temperature = 1.,
+        include_eos_in_output = True,  # if doing hierarchical sampling, eos must be kept for an easy time
+        **kwargs
+    ):
+        device = self.device
+
+        # derive wav2vec ids from the input wave
+
+        if exists(prime_wave):
+            assert not exists(prime_ids)
+            assert exists(self.wav2vec)
+            ids = self.wav2vec(prime_wave, flatten = False)
+        elif exists(prime_ids):
+            ids = prime_ids
+        else:
+            ids = torch.empty((batch_size, 0), dtype = torch.long, device = device)
+
+        if self.unique_consecutive:
+            ids = batch_unique_consecutive(ids, pad_value = self.pad_id)
+
+        # derive text embeddings if needed
+
+        has_text = exists(text) or exists(text_embeds)
+        assert not (self.transformer.has_condition ^ has_text)
+
+        if not exists(text_embeds) and exists(text):
+            with torch.no_grad():
+                text_embeds = self.transformer.embed_text(text, output_device = device)
+
+        # start length and get running id output
+
+        batch = ids.shape[0]
+        start_length = ids.shape[-1]
+        sample_semantic_ids = ids.clone()
+
+        batch_range = rearrange(torch.arange(batch, device = device), 'b -> b 1')
+        last_logit_indices = (ids != self.pad_id).sum(dim = -1).long()
+
+        # sample from transformer
+
+        for ind in tqdm(range(start_length, max_length), desc = 'generating semantic'):
+
+            logits = self.transformer.forward_with_cond_scale(
+                ids = sample_semantic_ids,
+                text_embeds = text_embeds,
+                **kwargs
+            )
+
+            last_logits = logits[batch_range, last_logit_indices]
+
+            last_logits = rearrange(last_logits, 'b 1 c -> b c')
+
+            filtered_logits = top_k(last_logits, thres = filter_thres)
+            sampled = gumbel_sample(filtered_logits, temperature = temperature, dim = -1)
+
+            sampled = rearrange(sampled, 'b -> b 1')
+            sample_semantic_ids = torch.cat((sample_semantic_ids, sampled), dim = -1)
+
+            if all_rows_have_eos_id(sample_semantic_ids, self.eos_id):
+                break
+
+            last_logit_indices += 1
+
+        sample_semantic_ids = mask_out_after_eos_id(sample_semantic_ids, self.pad_id, include_eos = include_eos_in_output)
+
+        # ensure all sequences have eos
+
+        has_eos_mask = (sample_semantic_ids == self.eos_id).any(dim = -1)
+
+        if not has_eos_mask.all():
+            append_eos_or_pad = torch.where(
+                has_eos_mask,
+                torch.full((batch, 1), self.pad_id, dtype = torch.long, device = device),
+                torch.full((batch, 1), self.eos_id, dtype = torch.long, device = device),
+            )
+
+            sample_semantic_ids = torch.cat((sample_semantic_ids, append_eos_or_pad), dim = -1)
+
+        return sample_semantic_ids
+
+    def forward(
+        self,
+        *,
+        semantic_token_ids = None,
+        raw_wave = None,
+        text = None,
+        text_embeds = None,
+        return_loss = False,
+        **kwargs
+    ):
+        assert exists(raw_wave) or exists(semantic_token_ids), 'either raw waveform (raw_wave) is given or semantic token ids are given (semantic_token_ids)'
+
+        if not exists(semantic_token_ids):
+            assert exists(self.wav2vec), 'VQWav2Vec must be be provided if given raw wave for training'
+            semantic_token_ids = self.wav2vec(raw_wave, flatten = False)
+
+        semantic_token_ids = rearrange(semantic_token_ids, 'b ... -> b (...)')
+
+        if self.training:
+            semantic_token_ids = append_eos_id(semantic_token_ids, self.transformer.eos_id)
+
+        if self.unique_consecutive:
+            semantic_token_ids = batch_unique_consecutive(semantic_token_ids, pad_value = self.pad_id)
+
+        input_ids = semantic_token_ids
+        if return_loss:
+            input_ids = semantic_token_ids[:, :-1]
+
+        logits = self.transformer(
+            ids = input_ids,
+            text = text,
+            text_embeds = text_embeds,
+            **kwargs
+        )
+
+        if not return_loss:
+            return logits
+
+        loss = F.cross_entropy(
+            rearrange(logits, 'b n c -> b c n'),
+            semantic_token_ids,
+            ignore_index = self.pad_id
+        )
+
+        return loss
 
 @typechecked
 class CoarseTransformerWrapper(nn.Module):
@@ -1227,16 +1252,22 @@ class AudioLM(nn.Module):
         soundstream: SoundStream,
         semantic_transformer: SemanticTransformer,
         coarse_transformer: CoarseTransformer,
-        fine_transformer: FineTransformer
+        fine_transformer: FineTransformer,
+        unique_consecutive = True
     ):
         super().__init__()
-        self.semantic = semantic_transformer
+
+        self.semantic = SemanticTransformerWrapper(
+            wav2vec = wav2vec,
+            transformer = semantic_transformer,
+            unique_consecutive = unique_consecutive
+        )
 
         self.coarse = CoarseTransformerWrapper(
             wav2vec = wav2vec,
             soundstream = soundstream,
             transformer = coarse_transformer,
-            unique_consecutive = semantic_transformer.unique_consecutive
+            unique_consecutive = unique_consecutive
         )
 
         self.fine = FineTransformerWrapper(

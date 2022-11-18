@@ -42,7 +42,7 @@ ex. `SemanticTransformer`
 
 ```python
 import torch
-from audiolm_pytorch import HubertWithKmeans, SemanticTransformer
+from audiolm_pytorch import HubertWithKmeans, SemanticTransformer, SemanticTransformerTrainer
 
 wav2vec = HubertWithKmeans(
     checkpoint_path = './hubert/hubert_base_ls960.pt',
@@ -50,30 +50,29 @@ wav2vec = HubertWithKmeans(
 )
 
 semantic_transformer = SemanticTransformer(
-    wav2vec = wav2vec,
+    num_semantic_tokens = 500,
     dim = 1024,
     depth = 6
 ).cuda()
 
-wave = torch.randn(1, 320 * 512).cuda()
 
-loss = semantic_transformer(
-    raw_wave = wave,
-    return_loss = True
+trainer = SemanticTransformerTrainer(
+    transformer = semantic_transformer,
+    wav2vec = wav2vec,
+    folder = '/home/phil/dl/data/LibriSpeech',
+    batch_size = 1,
+    data_max_length = 320 * 32,
+    num_train_steps = 1
 )
 
-loss.backward()
-
-# after much training above
-
-sample = semantic_transformer.generate(max_length = 128) # (1, < 128) - may terminate early if it detects [eos]
+trainer.train()
 ```
 
 ex. `CoarseTransformer`
 
 ```python
 import torch
-from audiolm_pytorch import HubertWithKmeans, SoundStream, CoarseTransformer, CoarseTransformerWrapper
+from audiolm_pytorch import HubertWithKmeans, SoundStream, CoarseTransformer, CoarseTransformerWrapper, CoarseTransformerTrainer
 
 wav2vec = HubertWithKmeans(
     checkpoint_path = './hubert/hubert_base_ls960.pt',
@@ -93,44 +92,31 @@ coarse_transformer = CoarseTransformer(
     depth = 6
 )
 
-coarse_wrapper = CoarseTransformerWrapper(
-    wav2vec = wav2vec,
+trainer = CoarseTransformerTrainer(
+    transformer = coarse_transformer,
     soundstream = soundstream,
-    transformer = coarse_transformer
-).cuda()
-
-wave = torch.randn(1, 32 * 320).cuda()
-
-loss = coarse_wrapper(
-    raw_wave = wave,
-    return_loss = True
+    wav2vec = wav2vec,
+    folder = '/home/phil/dl/data/LibriSpeech',
+    batch_size = 1,
+    data_max_length = 320 * 32,
+    num_train_steps = 10000
 )
 
-loss.backward()
-
-# after a lot of training
-
-mock_semantic_token_ids = torch.randint(0, wav2vec.codebook_size, (1, 128))
-
-coarse_tokens = coarse_wrapper.generate(
-    semantic_token_ids = mock_semantic_token_ids,
-    max_time_steps = 512
-) # (1, 512, 3) - (batch, time steps, num quantizers)
-
+trainer.train()
 ```
 
 ex. `FineTransformer`
 
 ```python
 import torch
-from audiolm_pytorch import SoundStream, FineTransformer, FineTransformerWrapper
+from audiolm_pytorch import SoundStream, FineTransformer, FineTransformerWrapper, FineTransformerTrainer
 
 soundstream = SoundStream(
     codebook_size = 1024,
     rq_num_quantizers = 8,
 )
 
-soundstream.load('/path/to/trained/soundstream.pt')
+# soundstream.load('/path/to/trained/soundstream.pt')
 
 transformer = FineTransformer(
     num_coarse_quantizers = 3,
@@ -140,28 +126,16 @@ transformer = FineTransformer(
     depth = 6
 )
 
-train_wrapper = FineTransformerWrapper(
+trainer = FineTransformerTrainer(
+    transformer = transformer,
     soundstream = soundstream,
-    transformer = transformer
-).cuda()
-
-wave = torch.randn(1, 320 * 512).cuda()
-
-loss = train_wrapper(
-    raw_wave = wave,
-    return_loss = True
+    folder = '/home/phil/dl/data/LibriSpeech',
+    batch_size = 1,
+    data_max_length = 320 * 32,
+    num_train_steps = 10000
 )
 
-loss.backward()
-
-# after a lot of training
-
-mock_coarse_token_ids = torch.randint(0, 1024, (1, 128, 3))
-
-fine_token_ids = train_wrapper.generate(
-    coarse_token_ids = mock_coarse_token_ids
-) # (1, 128, 5)
-
+trainer.train()
 ```
 
 All together now
@@ -217,6 +191,7 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 - [x] add efficient gradient penalty for discriminators for soundstream
 - [x] wire up sample hz from sound dataset -> transformers, and have proper resampling within during training - think about whether to allow for dataset to have sound files of varying or enforce same sample hz
 - [x] full transformer training code for all three transformers
+- [x] refactor so semantic transformer has a wrapper to that handles unique consecutives as well as wav to hubert or vq-wav2vec
 
 - [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
 - [ ] offer option to weight tie coarse, fine, and semantic embeddings across the 3 hierarchical transformers
@@ -227,8 +202,8 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 - [ ] add option to use flash attention
 - [ ] simplify training even more within AudioLM class
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
-- [ ] refactor so semantic transformer has a wrapper to that handles unique consecutives as well as wav to hubert or vq-wav2vec
 - [ ] validation function within audiolm that ensures all the pieces are compatible
+- [ ] meditate on eos and refactor the entire mess so input never has eos, but eos manually added to labels for prompt sequence
 
 ## Citations
 

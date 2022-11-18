@@ -27,6 +27,7 @@ from audiolm_pytorch.soundstream import SoundStream
 
 from audiolm_pytorch.audiolm_pytorch import (
     SemanticTransformer,
+    SemanticTransformerWrapper,
     CoarseTransformer,
     CoarseTransformerWrapper,
     FineTransformer,
@@ -341,6 +342,7 @@ class SoundStreamTrainer(nn.Module):
 class SemanticTransformerTrainer(nn.Module):
     def __init__(
         self,
+        wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]],
         transformer: SemanticTransformer,
         *,
         num_train_steps,
@@ -361,7 +363,13 @@ class SemanticTransformerTrainer(nn.Module):
         super().__init__()
         self.accelerator = Accelerator(**accelerate_kwargs)
 
+        self.wav2vec = wav2vec
         self.transformer = transformer
+
+        self.train_wrapper = SemanticTransformerWrapper(
+            wav2vec = wav2vec,
+            transformer = transformer
+        )
 
         self.register_buffer('steps', torch.Tensor([0]))
 
@@ -371,7 +379,7 @@ class SemanticTransformerTrainer(nn.Module):
 
         # optimizers
 
-        self.optim = get_optimizer(transformer.non_wav2vec_parameters(), lr = lr, wd = wd)
+        self.optim = get_optimizer(transformer.parameters(), lr = lr, wd = wd)
 
         # max grad norm
 
@@ -382,8 +390,8 @@ class SemanticTransformerTrainer(nn.Module):
         self.ds = SoundDataset(
             folder,
             max_length = data_max_length,
-            target_sample_hz = transformer.wav2vec.target_sample_hz,
-            seq_len_multiple_of = transformer.wav2vec.seq_len_multiple_of
+            target_sample_hz = wav2vec.target_sample_hz,
+            seq_len_multiple_of = wav2vec.seq_len_multiple_of
         )
 
         # split for validation
@@ -406,12 +414,12 @@ class SemanticTransformerTrainer(nn.Module):
         # prepare with accelerator
 
         (
-            self.transformer,
+            self.train_wrapper,
             self.optim,
             self.dl,
             self.valid_dl
         ) = self.accelerator.prepare(
-            self.transformer,
+            self.train_wrapper,
             self.optim,
             self.dl,
             self.valid_dl
@@ -467,14 +475,14 @@ class SemanticTransformerTrainer(nn.Module):
         for _ in range(self.grad_accum_every):
             wave = next(self.dl_iter).to(device)
 
-            loss = self.transformer(raw_wave = wave, return_loss = True)
+            loss = self.train_wrapper(raw_wave = wave, return_loss = True)
 
             self.accelerator.backward(loss / self.grad_accum_every)
 
             accum_log(logs, {'loss': loss.item() / self.grad_accum_every})
 
         if exists(self.max_grad_norm):
-            self.accelerator.clip_grad_norm_(self.transformer.non_wav2vec_parameters(), self.max_grad_norm)
+            self.accelerator.clip_grad_norm_(self.transformer.parameters(), self.max_grad_norm)
 
         self.optim.step()
         self.optim.zero_grad()
@@ -486,15 +494,11 @@ class SemanticTransformerTrainer(nn.Module):
         # sample results every so often
 
         if self.is_main and not (steps % self.save_results_every):
-            model = self.transformer
-            filename = str(steps)
-
-            model.eval()
-
             wave = next(self.valid_dl_iter).to(device)
 
             with torch.no_grad():
-                valid_loss = model(raw_wave = wave, return_loss = True)
+                self.train_wrapper.eval()
+                valid_loss = self.train_wrapper(raw_wave = wave, return_loss = True)
 
             self.print(f'{steps}: valid loss {valid_loss}')
 
