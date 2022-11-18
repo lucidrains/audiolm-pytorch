@@ -214,11 +214,11 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 - [x] complete sampling code for both Coarse and Fine Transformers, which will be tricky
 - [x] make sure full inference with or without prompting works on the `AudioLM` class
 - [x] complete full training code for soundstream, taking care of discriminator training
+- [x] add efficient gradient penalty for discriminators for soundstream
+- [x] wire up sample hz from sound dataset -> transformers, and have proper resampling within during training - think about whether to allow for dataset to have sound files of varying or enforce same sample hz
+- [x] full transformer training code for all three transformers
 
-- [ ] add efficient gradient penalty for discriminators for soundstream
 - [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
-- [ ] full transformer training code for all three transformers
-- [ ] wire up sample hz from sound dataset -> transformers, and have proper resampling within during training - think about whether to allow for dataset to have sound files of varying or enforce same sample hz
 - [ ] offer option to weight tie coarse, fine, and semantic embeddings across the 3 hierarchical transformers
 - [ ] DRY a little at the end
 - [ ] figure out how to suppress logging in fairseq
