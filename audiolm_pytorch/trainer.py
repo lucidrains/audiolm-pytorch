@@ -114,6 +114,7 @@ class SoundStreamTrainer(nn.Module):
         self.ds = SoundDataset(
             folder,
             max_length = data_max_length,
+            target_sample_hz = soundstream.target_sample_hz,
             seq_len_multiple_of = soundstream.seq_len_multiple_of
         )
 

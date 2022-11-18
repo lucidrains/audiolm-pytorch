@@ -153,6 +153,15 @@ loss = train_wrapper(
 )
 
 loss.backward()
+
+# after a lot of training
+
+mock_coarse_token_ids = torch.randint(0, 1024, (1, 128, 3))
+
+fine_token_ids = train_wrapper.generate(
+    coarse_token_ids = mock_coarse_token_ids
+) # (1, 128, 5)
+
 ```
 
 All together now
