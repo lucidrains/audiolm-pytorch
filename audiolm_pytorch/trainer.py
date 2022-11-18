@@ -236,12 +236,13 @@ class SoundStreamTrainer(nn.Module):
 
             discr_losses = self.soundstream(
                 wave,
+                apply_grad_penalty = apply_grad_penalty,
                 return_discr_loss = True,
                 return_discr_losses_separately = True
             )
 
             for name, discr_loss in discr_losses:
-                self.accelerator.backward(discr_loss / self.grad_accum_every)
+                self.accelerator.backward(discr_loss / self.grad_accum_every, retain_graph = True)
                 accum_log(logs, {name: discr_loss.item() / self.grad_accum_every})
 
         if exists(self.discr_max_grad_norm):

@@ -4,6 +4,7 @@ from functools import partial
 
 import torch
 from torch import nn, einsum
+from torch.autograd import grad as torch_grad
 import torch.nn.functional as F
 from einops import rearrange, reduce
 
@@ -30,13 +31,13 @@ def hinge_gen_loss(fake):
 def leaky_relu(p = 0.1):
     return nn.LeakyReLU(p)
 
-def gradient_penalty(images, output, weight = 10):
-    batch_size = images.shape[0]
+def gradient_penalty(wave, output, weight = 10):
+    batch_size, device = wave.shape[0], wave.device
 
     gradients = torch_grad(
         outputs = output,
-        inputs = images,
-        grad_outputs = torch.ones(output.size(), device = images.device),
+        inputs = wave,
+        grad_outputs = torch.ones_like(output),
         create_graph = True,
         retain_graph = True,
         only_inputs = True
@@ -334,7 +335,8 @@ class SoundStream(nn.Module):
         return_discr_loss = False,
         return_discr_losses_separately = False,
         return_recons_only = False,
-        input_sample_hz = None
+        input_sample_hz = None,
+        apply_grad_penalty = False
     ):
         if exists(input_sample_hz):
             x = resample(x, input_sample_hz, self.target_sample_hz)
@@ -366,25 +368,35 @@ class SoundStream(nn.Module):
             real, fake = orig_x, recon_x.detach()
 
             stft_discr_loss = None
+            stft_grad_penalty = None
             discr_losses = []
+            discr_grad_penalties = []
 
             if self.single_channel:
-                real, fake = orig_x, recon_x.detach()
-                stft_real_logits, stft_fake_logits = map(self.stft_discriminator, (real, fake))
+                real, fake = orig_x.clone(), recon_x.detach()
+                stft_real_logits, stft_fake_logits = map(self.stft_discriminator, (real.requires_grad_(), fake))
                 stft_discr_loss = (hinge_discr_loss(stft_fake_logits.real, stft_real_logits.real) + hinge_discr_loss(stft_fake_logits.imag, stft_real_logits.imag)) / 2
+
+                if apply_grad_penalty:
+                    stft_grad_penalty = gradient_penalty(real, stft_discr_loss)
 
             for discr, scale in zip(self.discriminators, self.discr_multi_scales):
                 scaled_real, scaled_fake = map(lambda t: F.interpolate(t, scale_factor = scale), (real, fake))
 
-                real_logits, fake_logits = map(discr, (scaled_real, scaled_fake))
+                real_logits, fake_logits = map(discr, (scaled_real.requires_grad_(), scaled_fake))
                 one_discr_loss = hinge_discr_loss(fake_logits, real_logits)
+
                 discr_losses.append(one_discr_loss)
+                discr_grad_penalties.append(gradient_penalty(scaled_real, one_discr_loss))
 
             if not return_discr_losses_separately:
                 all_discr_losses = torch.stack(discr_losses).mean()
 
                 if exists(stft_discr_loss):
                     all_discr_losses = all_discr_losses + stft_discr_loss
+
+                if exists(stft_grad_penalty):
+                    all_discr_losses = all_discr_losses + stft_grad_penalty
 
                 return all_discr_losses
 
@@ -394,8 +406,13 @@ class SoundStream(nn.Module):
 
             discr_losses_pkg.extend([(f'scale:{scale}', multi_scale_loss) for scale, multi_scale_loss in zip(self.discr_multi_scales, discr_losses)])
 
+            discr_losses_pkg.extend([(f'scale_grad_penalty:{scale}', discr_grad_penalty) for scale, discr_grad_penalty in zip(self.discr_multi_scales, discr_grad_penalties)])
+
             if exists(stft_discr_loss):
                 discr_losses_pkg.append(('stft', stft_discr_loss))
+
+            if exists(stft_grad_penalty):
+                discr_losses_pkg.append(('stft_grad_penalty', stft_grad_penalty))
 
             return discr_losses_pkg
 

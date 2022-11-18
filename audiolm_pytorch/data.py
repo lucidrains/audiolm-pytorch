@@ -93,9 +93,9 @@ def curtail_to_shortest_collate(data):
     return torch.stack(data)
 
 @collate_one_or_multiple_tensors
-def pad_to_longest(data):
+def pad_to_longest_fn(data):
     return pad_sequence(data, batch_first = True)
 
 def get_dataloader(ds, pad_to_longest = True, **kwargs):
-    collate_fn = pad_to_longest if pad_to_longest else curtail_to_shortest_collate
+    collate_fn = pad_to_longest_fn if pad_to_longest else curtail_to_shortest_collate
     return DataLoader(ds, collate_fn = collate_fn, **kwargs)
