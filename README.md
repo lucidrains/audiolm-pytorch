@@ -194,6 +194,7 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 - [x] wire up sample hz from sound dataset -> transformers, and have proper resampling within during training - think about whether to allow for dataset to have sound files of varying or enforce same sample hz
 - [x] full transformer training code for all three transformers
 - [x] refactor so semantic transformer has a wrapper to that handles unique consecutives as well as wav to hubert or vq-wav2vec
+- [x] simply not self attend to eos token on the prompting side (semantic for coarse transformer, coarse for fine transformer)
 
 - [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
 - [ ] offer option to weight tie coarse, fine, and semantic embeddings across the 3 hierarchical transformers
@@ -205,7 +206,6 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 - [ ] simplify training even more within AudioLM class
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
 - [ ] validation function within audiolm that ensures all the pieces are compatible
-- [ ] meditate on eos and refactor the entire mess so input never has eos, but eos manually added to labels for prompt sequence
 
 ## Citations
 
