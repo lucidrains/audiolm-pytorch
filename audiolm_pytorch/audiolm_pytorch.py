@@ -406,21 +406,14 @@ class CoarseTransformer(nn.Module):
         codebook_size,
         num_coarse_quantizers,
         dim,
-        num_semantic_tokens = None,
+        num_semantic_tokens,
         t5_name = DEFAULT_T5_NAME,
         has_condition = False,
         cond_drop_prob = 0.5,
         grad_shrink_alpha = 0.1,
-        wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
         **kwargs
     ):
         super().__init__()
-        assert exists(wav2vec) or exists(num_semantic_tokens)
-
-        if exists(wav2vec):
-            num_semantic_tokens = default(num_semantic_tokens, wav2vec.codebook_size)
-            assert num_semantic_tokens == wav2vec.codebook_size
-
         self.has_condition = has_condition
         self.embed_text = partial(t5_encode_text, name = t5_name)
         self.cond_drop_prob = cond_drop_prob
@@ -435,7 +428,6 @@ class CoarseTransformer(nn.Module):
         codebook_size_with_eos = codebook_size + 1
         self.coarse_embedding = nn.Embedding(num_coarse_quantizers * codebook_size_with_eos, dim)
 
-        self.wav2vec = wav2vec
         self.transformer = Transformer(dim = dim, dim_context = get_encoded_dim(t5_name), cross_attend = has_condition, grad_shrink_alpha = grad_shrink_alpha, **kwargs)
 
         self.codebook_size = codebook_size
