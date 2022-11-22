@@ -3,7 +3,6 @@ import copy
 from random import choice
 from pathlib import Path
 from shutil import rmtree
-from PIL import Image
 
 from typing import Union, List, Optional
 from typeguard import typechecked
@@ -12,10 +11,6 @@ import torch
 import torchaudio
 from torch import nn
 from torch.utils.data import Dataset, DataLoader, random_split
-
-import torchvision.transforms as T
-from torchvision.datasets import ImageFolder
-from torchvision.utils import make_grid, save_image
 
 from einops import rearrange
 
