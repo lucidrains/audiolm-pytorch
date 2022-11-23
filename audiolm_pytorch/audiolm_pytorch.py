@@ -2,7 +2,7 @@ import math
 from functools import partial
 
 from typing import Optional, Union, List
-from typeguard import typechecked
+from beartype import beartype
 
 import torch
 from torch import nn, einsum
@@ -309,7 +309,7 @@ class Transformer(nn.Module):
 
 # the three hierarchical transformers
 
-@typechecked
+@beartype
 class SemanticTransformer(nn.Module):
     def __init__(
         self,
@@ -398,7 +398,7 @@ class SemanticTransformer(nn.Module):
         tokens = self.transformer(tokens, context = text_embeds, context_mask = text_mask)
         return self.to_logits(tokens)
 
-@typechecked
+@beartype
 class CoarseTransformer(nn.Module):
     def __init__(
         self,
@@ -711,7 +711,7 @@ class FineTransformer(nn.Module):
 
 # training wrappers
 
-@typechecked
+@beartype
 class SemanticTransformerWrapper(nn.Module):
     def __init__(
         self,
@@ -860,7 +860,7 @@ class SemanticTransformerWrapper(nn.Module):
 
         return loss
 
-@typechecked
+@beartype
 class CoarseTransformerWrapper(nn.Module):
     def __init__(
         self,
@@ -1046,7 +1046,7 @@ class CoarseTransformerWrapper(nn.Module):
             coarse_loss * num_coarse_logits
         ) / (num_semantic_logits + num_coarse_logits)
 
-@typechecked
+@beartype
 class FineTransformerWrapper(nn.Module):
     def __init__(
         self,
@@ -1236,7 +1236,7 @@ class FineTransformerWrapper(nn.Module):
 
 # audio LM
 
-@typechecked
+@beartype
 class AudioLM(nn.Module):
     def __init__(
         self,

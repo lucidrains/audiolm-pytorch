@@ -19,6 +19,7 @@ setup(
   ],
   install_requires=[
     'accelerate',
+    'beartype',
     'einops>=0.6',
     'ema-pytorch',
     'fairseq',
@@ -29,7 +30,6 @@ setup(
     'torchaudio',
     'transformers',
     'tqdm',
-    'typeguard',
     'vector-quantize-pytorch>=0.10.11'
   ],
   classifiers=[
