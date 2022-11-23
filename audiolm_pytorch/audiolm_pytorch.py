@@ -10,7 +10,7 @@ from torch.autograd import grad as torch_grad
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 
-from einops import rearrange, repeat
+from einops import rearrange, repeat, reduce
 
 from audiolm_pytorch.vq_wav2vec import FairseqVQWav2Vec
 from audiolm_pytorch.hubert_kmeans import HubertWithKmeans
@@ -902,7 +902,6 @@ class CoarseTransformerWrapper(nn.Module):
         cond_scale = 3.,
         filter_thres = 0.9,
         temperature = 1.,
-        reshape_output = True,
         reconstruct_wave = False,
         **kwargs
     ):
@@ -951,17 +950,15 @@ class CoarseTransformerWrapper(nn.Module):
                 sampled_coarse_token_ids = torch.cat((sampled_coarse_token_ids, sampled), dim = -1)
 
         sampled_coarse_token_ids = mask_out_after_eos_id(sampled_coarse_token_ids, self.coarse_eos_id, keep_eos = False)
+        sampled_coarse_token_ids = rearrange(sampled_coarse_token_ids, 'b (n q) -> b n q', q = self.num_coarse_quantizers)
 
-        if reshape_output or reconstruct_wave:
-            sampled_coarse_token_ids = rearrange(sampled_coarse_token_ids, 'b (n q) -> b n q', q = self.num_coarse_quantizers)
+        if not reconstruct_wave:
+            return sampled_coarse_token_ids
 
-        if reconstruct_wave:
-            assert exists(self.soundstream)
-            wav = self.soundstream.decode_from_codebook_indices(sampled_coarse_token_ids)
-            wav = rearrange(wav, 'b 1 n -> b n')
-            return wav
+        assert exists(self.soundstream)
 
-        return sampled_coarse_token_ids
+        wav = self.soundstream.decode_from_codebook_indices(sampled_coarse_token_ids)
+        return rearrange(wav, 'b 1 n -> b n')
 
     def forward(
         self,
@@ -1087,8 +1084,8 @@ class FineTransformerWrapper(nn.Module):
         cond_scale = 3.,
         filter_thres = 0.9,
         temperature = 1.,
-        reshape_output = True,
         reconstruct_wave = False,
+        mask_out_generated_fine_tokens = False,
         **kwargs
     ):
         coarse_token_ids = rearrange(coarse_token_ids, 'b ... -> b (...)')
@@ -1141,20 +1138,32 @@ class FineTransformerWrapper(nn.Module):
 
         sampled_fine_token_ids = mask_out_after_eos_id(sampled_fine_token_ids, self.eos_id, keep_eos = False)
 
-        if reshape_output or reconstruct_wave:
-            sampled_fine_token_ids = rearrange(sampled_fine_token_ids, 'b (n q) -> b n q', q = self.num_fine_quantizers)
+        # reshape coarse and fine tokens for quantization dimension
 
-        if reconstruct_wave:
-            assert exists(self.soundstream)
+        sampled_fine_token_ids = rearrange(sampled_fine_token_ids, 'b (n q) -> b n q', q = self.num_fine_quantizers)
+        coarse_token_ids = rearrange(coarse_token_ids, 'b (n q) -> b n q', q = self.num_coarse_quantizers)
 
-            coarse_token_ids = rearrange(coarse_token_ids, 'b (n q) -> b n q', q = self.num_coarse_quantizers)
-            coarse_and_fine_ids = torch.cat((coarse_token_ids, sampled_fine_token_ids), dim = -1)
+        # whether to mask out fine token positions where the coarse token ids are all padding (variable lengthed training)
 
-            wav = self.soundstream.decode_from_codebook_indices(coarse_and_fine_ids)
-            wav = rearrange(wav, 'b 1 n -> b n')
-            return wav
+        if mask_out_generated_fine_tokens:
+            pos_is_all_padding = (coarse_token_ids == self.pad_id).all(dim = -1, keepdim = True)
+            seq_lengths = reduce(~pos_is_all_padding, 'b n 1 -> b', 'sum')
 
-        return sampled_fine_token_ids
+            sampled_fine_token_ids = sampled_fine_token_ids.masked_fill(pos_is_all_padding, self.pad_id)
+
+        # if not reconstructing wave, return just the fine token ids
+
+        if not reconstruct_wave:
+            return sampled_fine_token_ids
+
+        # reconstruct the wave using soundstream, concatting the fine and coarse token ids together first across quantization dimension
+
+        assert exists(self.soundstream)
+
+        coarse_and_fine_ids = torch.cat((coarse_token_ids, sampled_fine_token_ids), dim = -1)
+
+        wav = self.soundstream.decode_from_codebook_indices(coarse_and_fine_ids)
+        return rearrange(wav, 'b 1 n -> b n')
 
     def forward(
         self,
@@ -1272,7 +1281,8 @@ class AudioLM(nn.Module):
         text: Optional[List[str]] = None,
         prime_wave = None,
         max_length = 2048,
-        return_coarse_generated_wave = False
+        return_coarse_generated_wave = False,
+        mask_out_generated_fine_tokens = False
     ):
         if exists(prime_wave):
             prime_wave = prime_wave.to(self.device)
@@ -1296,7 +1306,8 @@ class AudioLM(nn.Module):
         generated_wave = self.fine.generate(
             text = text,
             coarse_token_ids = coarse_token_ids_or_recon_wave,
-            reconstruct_wave = True
+            reconstruct_wave = True,
+            mask_out_generated_fine_tokens = mask_out_generated_fine_tokens
         )
 
         return generated_wave

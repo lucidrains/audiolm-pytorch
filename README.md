@@ -206,6 +206,7 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 - [ ] simplify training even more within AudioLM class
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
 - [ ] validation function within audiolm that ensures all the pieces are compatible
+- [ ] return a list of waves in the case of variable lengthed audio
 
 ## Citations
 
