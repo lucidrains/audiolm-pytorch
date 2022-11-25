@@ -51,6 +51,15 @@ class SoundDataset(Dataset):
         file = self.files[idx]
 
         data, sample_hz = torchaudio.load(file)
+        
+        if data.size(1) >= self.max_length:
+            max_start = data.size(1) - self.max_length
+            start = torch.randint(0, max_start, (1, ))
+            data = data[:, start:start + self.max_length]
+
+        else:
+            data = torch.nn.functional.pad(data, (self.max_length - data.size(1), 0), 'constant')
+        
         data = rearrange(data, '1 ... -> ...')
 
         num_outputs = len(self.target_sample_hz)
