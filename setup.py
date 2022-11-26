@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
   name = 'audiolm-pytorch',
   packages = find_packages(exclude=[]),
-  version = '0.0.63',
+  version = '0.0.64',
   license='MIT',
   description = 'AudioLM - Language Modeling Approach to Audio Generation from Google Research - Pytorch',
   author = 'Phil Wang',
@@ -30,7 +30,7 @@ setup(
     'torchaudio',
     'transformers',
     'tqdm',
-    'vector-quantize-pytorch>=0.10.12'
+    'vector-quantize-pytorch>=0.10.14'
   ],
   classifiers=[
     'Development Status :: 4 - Beta',
