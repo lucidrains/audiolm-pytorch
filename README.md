@@ -173,7 +173,7 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 
 - <a href="https://ai.facebook.com/">MetaAI</a> for <a href="https://github.com/facebookresearch/fairseq">Fairseq</a> and the liberal license
 
-- <a href="https://github.com/eonglints">@eonglints</a> for offering his professional advice and expertise
+- <a href="https://github.com/eonglints">@eonglints</a> for offering his professional advice and expertise as well as pull requests!
 
 ## Todo
 
@@ -207,6 +207,7 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
 - [ ] validation function within audiolm that ensures all the pieces are compatible
 - [ ] return a list of waves in the case of variable lengthed audio
+- [ ] add token dropout or masking for more efficient training https://arxiv.org/abs/2211.11586 and https://arxiv.org/abs/2210.13432
 
 ## Citations
 
