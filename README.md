@@ -195,6 +195,7 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 - [x] full transformer training code for all three transformers
 - [x] refactor so semantic transformer has a wrapper to that handles unique consecutives as well as wav to hubert or vq-wav2vec
 - [x] simply not self attend to eos token on the prompting side (semantic for coarse transformer, coarse for fine transformer)
+- [x] add structured dropout from forgetful causal masking, far better than traditional dropouts
 
 - [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
 - [ ] offer option to weight tie coarse, fine, and semantic embeddings across the 3 hierarchical transformers
@@ -207,7 +208,6 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
 - [ ] validation function within audiolm that ensures all the pieces are compatible
 - [ ] return a list of waves in the case of variable lengthed audio
-- [ ] add token dropout or masking for more efficient training https://arxiv.org/abs/2211.11586 and https://arxiv.org/abs/2210.13432
 
 ## Citations
 
