@@ -275,3 +275,13 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
     primaryClass = {cs.CV}
 }
 ```
+
+```bibtex
+@article{Liu2022FCMFC,
+    title   = {FCM: Forgetful Causal Masking Makes Causal Language Models Better Zero-Shot Learners},
+    author  = {Hao Liu and Xinyang Geng and Lisa Lee and Igor Mordatch and Sergey Levine and Sharan Narang and P. Abbeel},
+    journal = {ArXiv},
+    year    = {2022},
+    volume  = {abs/2210.13432}
+}
+```
