@@ -1,6 +1,6 @@
 <img src="./audiolm.png" width="600px"></img>
 
-## AudioLM - Pytorch (wip)
+## AudioLM - Pytorch
 
 Implementation of <a href="https://google-research.github.io/seanet/audiolm/examples/">AudioLM</a>, a Language Modeling Approach to Audio Generation out of Google Research, in Pytorch
 
@@ -283,5 +283,16 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
     journal = {ArXiv},
     year    = {2022},
     volume  = {abs/2210.13432}
+}
+```
+
+```bibtex
+@inproceedings{anonymous2022normformer,
+    title   = {NormFormer: Improved Transformer Pretraining with Extra Normalization},
+    author  = {Anonymous},
+    booktitle = {Submitted to The Tenth International Conference on Learning Representations },
+    year    = {2022},
+    url     = {https://openreview.net/forum?id=GMYWzWztDx5},
+    note    = {under review}
 }
 ```
