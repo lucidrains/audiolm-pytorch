@@ -933,7 +933,7 @@ class SemanticTransformerWrapper(nn.Module):
             input_ids = semantic_token_ids[:, :-1]
 
         self_attn_mask = None
-        if self.mask_prob > 0.:
+        if self.mask_prob > 0. and self.training:
             self_attn_mask = generate_mask_with_prob(input_ids.shape, self.mask_prob, input_ids.device)
 
         logits = self.transformer(
@@ -1118,7 +1118,7 @@ class CoarseTransformerWrapper(nn.Module):
 
         # forgetful causal mask - structured dropout
 
-        if self.mask_prob > 0:
+        if self.mask_prob > 0 and self.training:
             self_attn_mask &= generate_mask_with_prob(self_attn_mask.shape, self.mask_prob, device = self_attn_mask.device)
 
         # whether to early return the logits
@@ -1320,7 +1320,7 @@ class FineTransformerWrapper(nn.Module):
 
         # forgetful causal mask - structured dropout
 
-        if self.mask_prob > 0:
+        if self.mask_prob > 0 and self.training:
             self_attn_mask &= generate_mask_with_prob(self_attn_mask.shape, self.mask_prob, device = self_attn_mask.device)
 
         # early return the logits
