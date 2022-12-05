@@ -96,7 +96,7 @@ class SoundStreamTrainer(nn.Module):
         self.accelerator = Accelerator(**accelerate_kwargs)
 
         self.soundstream = soundstream
-        self.ema_soundstream = EMA(soundstream, update_after_step = ema_update_after_step, update_every = ema_update_every)
+        self.ema_soundstream = EMA(soundstream, beta=ema_beta, update_after_step = ema_update_after_step, update_every = ema_update_every)
 
         self.register_buffer('steps', torch.Tensor([0]))
 
