@@ -44,6 +44,9 @@ ex. `SemanticTransformer`
 import torch
 from audiolm_pytorch import HubertWithKmeans, SemanticTransformer, SemanticTransformerTrainer
 
+# hubert checkpoints can be downloaded at
+# https://github.com/facebookresearch/fairseq/tree/main/examples/hubert
+
 wav2vec = HubertWithKmeans(
     checkpoint_path = './hubert/hubert_base_ls960.pt',
     kmeans_path = './hubert/hubert_base_ls960_L9_km500.bin'

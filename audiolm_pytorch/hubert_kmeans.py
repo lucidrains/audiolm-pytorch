@@ -15,6 +15,11 @@ def exists(val):
     return val is not None
 
 class HubertWithKmeans(nn.Module):
+    """
+    checkpoint and kmeans can be downloaded at https://github.com/facebookresearch/fairseq/tree/main/examples/hubert
+    or you can train your own
+    """
+
     def __init__(
         self,
         checkpoint_path,
