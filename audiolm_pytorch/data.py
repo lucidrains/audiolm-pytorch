@@ -52,7 +52,7 @@ class SoundDataset(Dataset):
 
         data, sample_hz = torchaudio.load(file)
         
-        if data.size(1) >= self.max_length:
+        if data.size(1) > self.max_length:
             max_start = data.size(1) - self.max_length
             start = torch.randint(0, max_start, (1, ))
             data = data[:, start:start + self.max_length]
