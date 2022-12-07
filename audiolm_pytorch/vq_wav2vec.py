@@ -38,6 +38,8 @@ class FairseqVQWav2Vec(nn.Module):
         self.model = model[0]
         self.model.eval()
 
+        assert hasattr(self.model, 'vector_quantizer') and hasattr(self.model.vector_quantizer, 'embedding'), 'the vq wav2vec model does not seem to be valid'
+
     @property
     def groups(self):
         return self.model.vector_quantizer.groups

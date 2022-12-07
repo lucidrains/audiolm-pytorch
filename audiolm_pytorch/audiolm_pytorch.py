@@ -826,7 +826,7 @@ class SemanticTransformerWrapper(nn.Module):
         super().__init__()
         self.wav2vec = wav2vec
         self.transformer = transformer
-        assert self.wav2vec.codebook_size == transformer.num_semantic_tokens, f'num_semantic_tokens on SemanticTransformer must be set to {self.wav2vec.codebook_size}'
+        assert not exists(self.wav2vec) or self.wav2vec.codebook_size == transformer.num_semantic_tokens, f'num_semantic_tokens on SemanticTransformer must be set to {self.wav2vec.codebook_size}'
 
         self.unique_consecutive = unique_consecutive
         self.pad_id = pad_id
