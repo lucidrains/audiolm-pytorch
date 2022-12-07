@@ -202,16 +202,14 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 - [x] simply not self attend to eos token on the prompting side (semantic for coarse transformer, coarse for fine transformer)
 - [x] add structured dropout from forgetful causal masking, far better than traditional dropouts
 - [x] figure out how to suppress logging in fairseq
+- [x] assert that all three transformers passed into audiolm is compatible
 
 - [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
-- [ ] offer option to weight tie coarse, fine, and semantic embeddings across the 3 hierarchical transformers
 - [ ] DRY a little at the end
 - [ ] test with speech synthesis for starters
-- [ ] abstract out conditioning + classifier free guidance into external module or potentially a package
 - [ ] add option to use flash attention
 - [ ] simplify training even more within AudioLM class
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
-- [ ] validation function within audiolm that ensures all the pieces are compatible
 - [ ] return a list of waves in the case of variable lengthed audio
 
 ## Citations

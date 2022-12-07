@@ -491,6 +491,8 @@ class CoarseTransformer(nn.Module):
         **kwargs
     ):
         super().__init__()
+        self.num_semantic_tokens = num_semantic_tokens
+
         self.has_condition = has_condition
         self.embed_text = partial(t5_encode_text, name = t5_name)
         self.cond_drop_prob = cond_drop_prob
@@ -1377,6 +1379,10 @@ class AudioLM(nn.Module):
         unique_consecutive = True
     ):
         super().__init__()
+
+        assert semantic_transformer.num_semantic_tokens == coarse_transformer.num_semantic_tokens
+        assert coarse_transformer.codebook_size == fine_transformer.codebook_size
+        assert coarse_transformer.num_coarse_quantizers == fine_transformer.num_coarse_quantizers
 
         self.semantic = SemanticTransformerWrapper(
             wav2vec = wav2vec,
