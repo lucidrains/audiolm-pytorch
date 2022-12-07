@@ -55,7 +55,7 @@ wav2vec = HubertWithKmeans(
 )
 
 semantic_transformer = SemanticTransformer(
-    num_semantic_tokens = 500,
+    num_semantic_tokens = wav2vec.codebook_size,
     dim = 1024,
     depth = 6
 ).cuda()
@@ -92,7 +92,7 @@ soundstream = SoundStream(
 soundstream.load('/path/to/trained/soundstream.pt')
 
 coarse_transformer = CoarseTransformer(
-    wav2vec = wav2vec,
+    num_semantic_tokens = wav2vec.codebook_size,
     codebook_size = 1024,
     num_coarse_quantizers = 3,
     dim = 512,
