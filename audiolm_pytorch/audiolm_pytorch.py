@@ -244,6 +244,8 @@ class Attention(nn.Module):
         self.norm = LayerNorm(dim)
         self.context_norm = LayerNorm(dim_context) if norm_context else nn.Identity()
 
+        self.attn_dropout = nn.Dropout(dropout)
+
         self.num_null_kv = num_null_kv
         self.null_kv = nn.Parameter(torch.randn(2, num_null_kv, dim_head))
 
@@ -298,6 +300,7 @@ class Attention(nn.Module):
             sim = sim.masked_fill(causal_mask, -torch.finfo(sim.dtype).max)
 
         attn = sim.softmax(dim = -1)
+        attn = self.attn_dropout(attn)
 
         out = einsum('b h i j, b j d -> b h i d', attn, v)
 
