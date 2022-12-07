@@ -16,6 +16,9 @@ def exists(val):
 class FairseqVQWav2Vec(nn.Module):
     """
     checkpoint path can be found at https://github.com/facebookresearch/fairseq/blob/main/examples/wav2vec/README.md#vq-wav2vec
+    specifically download the kmeans model for now
+
+    $ wget https://dl.fbaipublicfiles.com/fairseq/wav2vec/vq-wav2vec_kmeans.pt
     """
 
     def __init__(
