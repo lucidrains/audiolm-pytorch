@@ -201,11 +201,11 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 - [x] refactor so semantic transformer has a wrapper to that handles unique consecutives as well as wav to hubert or vq-wav2vec
 - [x] simply not self attend to eos token on the prompting side (semantic for coarse transformer, coarse for fine transformer)
 - [x] add structured dropout from forgetful causal masking, far better than traditional dropouts
+- [x] figure out how to suppress logging in fairseq
 
 - [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
 - [ ] offer option to weight tie coarse, fine, and semantic embeddings across the 3 hierarchical transformers
 - [ ] DRY a little at the end
-- [ ] figure out how to suppress logging in fairseq
 - [ ] test with speech synthesis for starters
 - [ ] abstract out conditioning + classifier free guidance into external module or potentially a package
 - [ ] add option to use flash attention

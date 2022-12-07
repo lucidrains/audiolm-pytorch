@@ -5,11 +5,15 @@ from torch import nn
 from einops import rearrange, pack, unpack
 
 import joblib
+
 import fairseq
 
 from torchaudio.functional import resample
 
 from audiolm_pytorch.utils import curtail_to_multiple
+
+import logging
+logging.root.setLevel(logging.ERROR)
 
 def exists(val):
     return val is not None
