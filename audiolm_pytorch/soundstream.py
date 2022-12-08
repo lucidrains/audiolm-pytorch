@@ -152,7 +152,7 @@ class STFTDiscriminator(nn.Module):
         H = 256 samples
         '''
 
-        x = torch.view_as_complex(torch.stft(x,1024, hop_length=256,win_length=1024))
+        x = torch.view_as_complex(torch.stft(x,1024, hop_length=256,win_length=1024, return_complex=False))
         x = rearrange(x, 'b ... -> b 1 ...')
 
         intermediates = []
