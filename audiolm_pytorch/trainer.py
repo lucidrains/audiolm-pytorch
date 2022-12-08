@@ -77,7 +77,7 @@ class SoundStreamTrainer(nn.Module):
         data_max_length = None,
         folder,
         lr = 3e-4,
-        grad_accum_every = 1,
+        grad_accum_every = 4,
         wd = 0.,
         max_grad_norm = 0.5,
         discr_max_grad_norm = None,
@@ -226,11 +226,14 @@ class SoundStreamTrainer(nn.Module):
             wave = next(self.dl_iter)
             wave = wave.to(device)
 
-            loss = self.soundstream(wave)
+            loss, (recon_loss, *_) = self.soundstream(wave, return_loss_breakdown = True)
 
             self.accelerator.backward(loss / self.grad_accum_every)
 
-            accum_log(logs, {'loss': loss.item() / self.grad_accum_every})
+            accum_log(logs, dict(
+                loss = loss.item() / self.grad_accum_every,
+                recon_loss = recon_loss / self.grad_accum_every
+            ))
 
         if exists(self.max_grad_norm):
             self.accelerator.clip_grad_norm_(self.soundstream.parameters(), self.max_grad_norm)
@@ -270,14 +273,14 @@ class SoundStreamTrainer(nn.Module):
 
         # build pretty printed losses
 
-        losses_str = f"{steps}: soundstream loss: {logs['loss']}"
+        losses_str = f"{steps}: soundstream total loss: {logs['loss']:.3f}, soundstream recon loss: {logs['recon_loss']:.3f}"
 
         for key, loss in logs.items():
             if not key.startswith('scale:'):
                 continue
             _, scale_factor = key.split(':')
 
-            losses_str += f" | discr (scale {scale_factor}) loss: {loss:.2f}"
+            losses_str += f" | discr (scale {scale_factor}) loss: {loss:.3f}"
 
         # log
 

@@ -247,12 +247,13 @@ class SoundStream(nn.Module):
         codebook_dim = 512,
         codebook_size = 1024,
         rq_num_quantizers = 8,
+        rq_commitment_weight = 1.,
         input_channels = 1,
         discr_multi_scales = (1, 0.5, 0.25),
         recon_loss_weight = 1.,
         adversarial_loss_weight = 1.,
         feature_loss_weight = 100,
-        quantize_dropout_cutoff_index = 0,
+        quantize_dropout_cutoff_index = 1,
         target_sample_hz = 24000
     ):
         super().__init__()
@@ -280,6 +281,7 @@ class SoundStream(nn.Module):
             dim = codebook_dim,
             num_quantizers = rq_num_quantizers,
             codebook_size = codebook_size,
+            commitment_weight = rq_commitment_weight,
             kmeans_init = True,
             threshold_ema_dead_code = 2,
             quantize_dropout = True,
@@ -334,6 +336,7 @@ class SoundStream(nn.Module):
         return_encoded = False,
         return_discr_loss = False,
         return_discr_losses_separately = False,
+        return_loss_breakdown = False,
         return_recons_only = False,
         input_sample_hz = None,
         apply_grad_penalty = False
@@ -459,4 +462,13 @@ class SoundStream(nn.Module):
 
         adversarial_loss = torch.stack(adversarial_losses).mean()
 
-        return recon_loss * self.recon_loss_weight + adversarial_loss * self.adversarial_loss_weight + feature_loss * self.feature_loss_weight
+        # sum commitment loss
+
+        all_commitment_loss = commit_loss.sum()
+
+        total_loss = recon_loss * self.recon_loss_weight + adversarial_loss * self.adversarial_loss_weight + feature_loss * self.feature_loss_weight + all_commitment_loss
+
+        if return_loss_breakdown:
+            return total_loss, (recon_loss, adversarial_loss, feature_loss, all_commitment_loss)
+
+        return total_loss

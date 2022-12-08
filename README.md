@@ -30,6 +30,7 @@ trainer = SoundStreamTrainer(
     soundstream,
     folder = '/path/to/librispeech',
     batch_size = 4,
+    grad_accum_every = 8,         # effective batch size of 32
     data_max_length = 320 * 32,
     num_train_steps = 10000
 ).cuda()
