@@ -24,6 +24,7 @@ setup(
     'ema-pytorch',
     'fairseq',
     'joblib',
+    'local-attention>=1.5.7',
     'scikit-learn',
     'sentencepiece',
     'torch>=1.6',
