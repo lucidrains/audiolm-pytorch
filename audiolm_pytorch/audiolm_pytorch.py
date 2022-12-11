@@ -1295,20 +1295,23 @@ class FineTransformerWrapper(nn.Module):
         self,
         *,
         raw_wave = None,
+        token_ids = None,
         coarse_token_ids = None,
         fine_token_ids = None,
         return_loss = False,
         **kwargs
     ):
-        assert exists(raw_wave) ^ (exists(coarse_token_ids) and exists(fine_token_ids)), 'either raw waveform (raw_wav) is given, or coarse and fine token ids (coarse_token_ids, fine_token_ids)'
+        assert exists(raw_wave) ^ (exists(token_ids) ^ (exists(coarse_token_ids) and exists(fine_token_ids))), 'either raw waveform (raw_wav) is given, or coarse and fine token ids (coarse_token_ids, fine_token_ids)'
 
         if exists(raw_wave):
             assert exists(self.soundstream), 'SoundStream must be provided if given raw wave for training'
 
             with torch.no_grad():
                 self.soundstream.eval()
-                _, indices, _ = self.soundstream(raw_wave, return_encoded = True)
-                coarse_token_ids, fine_token_ids = indices[..., :self.num_coarse_quantizers], indices[..., self.num_coarse_quantizers:]
+                _, token_ids, _ = self.soundstream(raw_wave, return_encoded = True)
+
+        if exists(token_ids):
+            coarse_token_ids, fine_token_ids = token_ids[..., :self.num_coarse_quantizers], token_ids[..., self.num_coarse_quantizers:]
 
         coarse_token_ids = rearrange(coarse_token_ids, 'b ... -> b (...)')
         fine_token_ids = rearrange(fine_token_ids, 'b ... -> b (...)')
