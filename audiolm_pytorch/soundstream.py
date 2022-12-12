@@ -98,7 +98,7 @@ class MultiScaleDiscriminator(nn.Module):
 
 class ModReLU(nn.Module):
     """
-    https://arxiv.org/abs/2102.13092
+    https://arxiv.org/abs/1705.09792
     https://github.com/pytorch/pytorch/issues/47052#issuecomment-718948801
     """
     def __init__(self):
