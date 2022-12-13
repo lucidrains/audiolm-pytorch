@@ -844,6 +844,7 @@ class SemanticTransformerWrapper(nn.Module):
 
     @eval_decorator
     @torch.no_grad()
+    @beartype
     def generate(
         self,
         *,
@@ -1008,6 +1009,7 @@ class CoarseTransformerWrapper(nn.Module):
 
     @eval_decorator
     @torch.no_grad()
+    @beartype
     def generate(
         self,
         *,
@@ -1201,6 +1203,7 @@ class FineTransformerWrapper(nn.Module):
 
     @eval_decorator
     @torch.no_grad()
+    @beartype
     def generate(
         self,
         *,

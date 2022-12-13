@@ -4,7 +4,7 @@ from random import choice
 from pathlib import Path
 from shutil import rmtree
 
-from typing import Union, List, Optional
+from typing import Union, List, Optional, Tuple
 from typing_extensions import Annotated
 
 from beartype import beartype
@@ -385,8 +385,9 @@ class SemanticTransformerTrainer(nn.Module):
         *,
         num_train_steps,
         batch_size,
+        dataset: Optional[Dataset] = None,
         data_max_length = None,
-        folder,
+        folder = None,
         lr = 3e-4,
         grad_accum_every = 1,
         wd = 0.,
@@ -425,12 +426,18 @@ class SemanticTransformerTrainer(nn.Module):
 
         # create dataset
 
-        self.ds = SoundDataset(
-            folder,
-            max_length = data_max_length,
-            target_sample_hz = wav2vec.target_sample_hz,
-            seq_len_multiple_of = wav2vec.seq_len_multiple_of
-        )
+        self.ds = dataset
+        if not exists(self.ds):
+            assert exists(folder), 'folder must be passed in, if not passing in a custom dataset for text conditioned audio synthesis training'
+
+            self.ds = SoundDataset(
+                folder,
+                max_length = data_max_length,
+                target_sample_hz = wav2vec.target_sample_hz,
+                seq_len_multiple_of = wav2vec.seq_len_multiple_of
+            )
+
+        self.ds_fields = None
 
         # split for validation
 
@@ -500,6 +507,13 @@ class SemanticTransformerTrainer(nn.Module):
     def is_local_main(self):
         return self.accelerator.is_local_main_process
 
+    def data_tuple_to_kwargs(self, data):
+        if not exists(self.ds_fields):
+            self.ds_fields = determine_types(data, DATASET_FIELD_TYPE_CONFIG)
+            assert not has_duplicates(self.ds_fields), 'dataset fields must not have duplicate field names'
+
+        return dict(zip(self.ds_fields, data))
+
     def train_step(self):
         device = self.device
 
@@ -514,9 +528,9 @@ class SemanticTransformerTrainer(nn.Module):
         # update vae (generator)
 
         for _ in range(self.grad_accum_every):
-            wave = next(self.dl_iter).to(device)
+            data_kwargs = self.data_tuple_to_kwargs(next(self.dl_iter))
 
-            loss = self.train_wrapper(raw_wave = wave, return_loss = True)
+            loss = self.train_wrapper(**data_kwargs, return_loss = True)
 
             self.accelerator.backward(loss / self.grad_accum_every)
 
@@ -535,11 +549,11 @@ class SemanticTransformerTrainer(nn.Module):
         # sample results every so often
 
         if self.is_main and not (steps % self.save_results_every):
-            wave = next(self.valid_dl_iter).to(device)
+            data_kwargs = self.data_tuple_to_kwargs(next(self.valid_dl_iter))
 
             with torch.no_grad():
                 self.train_wrapper.eval()
-                valid_loss = self.train_wrapper(raw_wave = wave, return_loss = True)
+                valid_loss = self.train_wrapper(**data_kwargs, return_loss = True)
 
             self.print(f'{steps}: valid loss {valid_loss}')
 
@@ -575,8 +589,10 @@ class CoarseTransformerTrainer(nn.Module):
         *,
         num_train_steps,
         batch_size,
+        dataset: Optional[Dataset] = None,
+        ds_fields: Tuple[str, ...] = ('raw_wave', 'raw_wave_for_soundstream', 'text'),
         data_max_length = None,
-        folder,
+        folder = None,
         lr = 3e-4,
         grad_accum_every = 1,
         wd = 0.,
@@ -617,15 +633,22 @@ class CoarseTransformerTrainer(nn.Module):
 
         # create dataset
 
-        self.ds = SoundDataset(
-            folder,
-            max_length = data_max_length,
-            target_sample_hz = (
-                wav2vec.target_sample_hz,
-                soundstream.target_sample_hz
-            ), # need 2 waves resampled differently here
-            seq_len_multiple_of = soundstream.seq_len_multiple_of
-        )
+        self.ds = dataset
+
+        if not exists(self.ds):
+            assert exists(folder), 'folder must be passed in, if not passing in a custom dataset for text conditioned audio synthesis training'
+
+            self.ds = SoundDataset(
+                folder,
+                max_length = data_max_length,
+                target_sample_hz = (
+                    wav2vec.target_sample_hz,
+                    soundstream.target_sample_hz
+                ), # need 2 waves resampled differently here
+                seq_len_multiple_of = soundstream.seq_len_multiple_of
+            )
+
+        self.ds_fields = ds_fields
 
         # split for validation
 
@@ -711,11 +734,10 @@ class CoarseTransformerTrainer(nn.Module):
         # update vae (generator)
 
         for _ in range(self.grad_accum_every):
-            wave_wav2vec, wave_soundstream = tuple(map(lambda t: t.to(device), next(self.dl_iter)))
+            data_kwargs = dict(zip(self.ds_fields, next(self.dl_iter)))
 
             loss = self.train_wrapper(
-                raw_wave = wave_wav2vec,
-                raw_wave_for_soundstream = wave_soundstream,
+                **data_kwargs,
                 return_loss = True
             )
 
@@ -736,14 +758,13 @@ class CoarseTransformerTrainer(nn.Module):
         # sample results every so often
 
         if self.is_main and not (steps % self.save_results_every):
-            wave_wav2vec, wave_soundstream = tuple(map(lambda t: t.to(device), next(self.valid_dl_iter)))
+            data_kwargs = dict(zip(self.ds_fields, next(self.valid_dl_iter)))
 
             with torch.no_grad():
                 self.train_wrapper.eval()
 
                 valid_loss = self.train_wrapper(
-                    raw_wave = wave_wav2vec,
-                    raw_wave_for_soundstream = wave_soundstream,
+                    **data_kwargs,
                     return_loss = True
                 )
 
@@ -780,8 +801,9 @@ class FineTransformerTrainer(nn.Module):
         *,
         num_train_steps,
         batch_size,
+        dataset: Optional[Dataset] = None,
         data_max_length = None,
-        folder,
+        folder = None,
         lr = 3e-4,
         grad_accum_every = 1,
         wd = 0.,
@@ -820,12 +842,19 @@ class FineTransformerTrainer(nn.Module):
 
         # create dataset
 
-        self.ds = SoundDataset(
-            folder,
-            max_length = data_max_length,
-            target_sample_hz = soundstream.target_sample_hz,
-            seq_len_multiple_of = soundstream.seq_len_multiple_of
-        )
+        self.ds = dataset
+
+        if not exists(self.ds):
+            assert exists(folder), 'folder must be passed in, if not passing in a custom dataset for text conditioned audio synthesis training'
+
+            self.ds = SoundDataset(
+                folder,
+                max_length = data_max_length,
+                target_sample_hz = soundstream.target_sample_hz,
+                seq_len_multiple_of = soundstream.seq_len_multiple_of
+            )
+
+        self.ds_fields = None
 
         # split for validation
 
@@ -897,6 +926,13 @@ class FineTransformerTrainer(nn.Module):
     def is_local_main(self):
         return self.accelerator.is_local_main_process
 
+    def data_tuple_to_kwargs(self, data):
+        if not exists(self.ds_fields):
+            self.ds_fields = determine_types(data, DATASET_FIELD_TYPE_CONFIG)
+            assert not has_duplicates(self.ds_fields), 'dataset fields must not have duplicate field names'
+
+        return dict(zip(self.ds_fields, data))
+
     def train_step(self):
         device = self.device
 
@@ -911,8 +947,8 @@ class FineTransformerTrainer(nn.Module):
         # update vae (generator)
 
         for _ in range(self.grad_accum_every):
-            wave = next(self.dl_iter).to(device)
-            loss = self.train_wrapper(raw_wave = wave, return_loss = True)
+            data_kwargs = self.data_tuple_to_kwargs(next(self.dl_iter))
+            loss = self.train_wrapper(**data_kwargs, return_loss = True)
 
             self.accelerator.backward(loss / self.grad_accum_every)
 
@@ -931,11 +967,11 @@ class FineTransformerTrainer(nn.Module):
         # sample results every so often
 
         if self.is_main and not (steps % self.save_results_every):
-            wave = next(self.valid_dl_iter).to(device)
+            data_kwargs = self.data_tuple_to_kwargs(next(self.valid_dl_iter))
 
             with torch.no_grad():
                 self.train_wrapper.eval()
-                valid_loss = self.train_wrapper(raw_wave = wave, return_loss = True)
+                valid_loss = self.train_wrapper(**data_kwargs, return_loss = True)
 
             self.print(f'{steps}: valid loss {valid_loss}')
 

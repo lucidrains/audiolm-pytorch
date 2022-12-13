@@ -171,6 +171,69 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 
 ```
 
+## Text Conditioned Audio Synthesis
+
+ex. Semantic Transformer
+
+```python
+import torch
+from audiolm_pytorch import HubertWithKmeans, SemanticTransformer, SemanticTransformerTrainer, get_embeds, FairseqVQWav2Vec
+
+wav2vec = HubertWithKmeans(
+    checkpoint_path = './hubert/hubert_base_ls960.pt',
+    kmeans_path = './hubert/hubert_base_ls960_L9_km500.bin'
+)
+
+semantic_transformer = SemanticTransformer(
+    num_semantic_tokens = 500,
+    dim = 1024,
+    depth = 6,
+    has_condition = True  # this will have to be set to True
+).cuda()
+
+# mock text video dataset (as an example)
+
+# you will have to extend your own from `Dataset`, and return an audio tensor as well as a string (the audio description) in any order (the framework will autodetect and route it into the transformer)
+
+from torch.utils.data import Dataset
+
+class MockTextAudioDataset(Dataset):
+    def __init__(self, length = 100, audio_length = 320 * 32):
+        super().__init__()
+        self.audio_length = audio_length
+        self.len = length
+
+    def __len__(self):
+        return self.len
+
+    def __getitem__(self, idx):
+        mock_audio = torch.randn(self.audio_length)
+        mock_caption = 'audio caption'
+        return mock_caption, mock_audio
+
+dataset = MockTextAudioDataset()
+
+# instantiate semantic transformer trainer and train
+
+trainer = SemanticTransformerTrainer(
+    transformer = semantic_transformer,
+    wav2vec = wav2vec,
+    dataset = dataset,
+    batch_size = 4,
+    grad_accum_every = 8,
+    data_max_length = 320 * 32,
+    num_train_steps = 100000
+)
+
+trainer.train()
+
+# after much training above
+
+sample = trainer.generate(text = ['sound of rain drops on the rooftops'], batch_size = 1, max_length = 2) # (1, < 128) - may terminate early if it detects [eos]
+
+```
+
+
 ## Appreciation
 
 - <a href="https://stability.ai/">Stability.ai</a> for the generous sponsorship to work and open source cutting edge artificial intelligence research

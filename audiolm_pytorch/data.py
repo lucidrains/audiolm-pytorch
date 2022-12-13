@@ -1,6 +1,9 @@
 from pathlib import Path
 from functools import partial, wraps
 
+from typing import Tuple
+from beartype.door import is_bearable
+
 import torchaudio
 from torchaudio.functional import resample
 
@@ -89,9 +92,18 @@ def collate_one_or_multiple_tensors(fn):
         is_one_data = not isinstance(data[0], tuple)
 
         if is_one_data:
-            return fn(data)
+            data = (data,)
 
-        return tuple(map(fn, zip(*data)))
+        outputs = []
+        for datum in zip(*data):
+            if is_bearable(datum, Tuple[str, ...]):
+                output = list(datum)
+            else:
+                output = fn(datum)
+
+            outputs.append(output)
+
+        return tuple(outputs)
 
     return inner
 
