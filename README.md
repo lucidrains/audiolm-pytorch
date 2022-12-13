@@ -177,7 +177,7 @@ ex. Semantic Transformer
 
 ```python
 import torch
-from audiolm_pytorch import HubertWithKmeans, SemanticTransformer, SemanticTransformerTrainer, get_embeds, FairseqVQWav2Vec
+from audiolm_pytorch import HubertWithKmeans, SemanticTransformer, SemanticTransformerTrainer
 
 wav2vec = HubertWithKmeans(
     checkpoint_path = './hubert/hubert_base_ls960.pt',
@@ -275,6 +275,7 @@ sample = trainer.generate(text = ['sound of rain drops on the rooftops'], batch_
 - [ ] simplify training even more within AudioLM class
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
 - [ ] return a list of waves in the case of variable lengthed audio
+- [ ] just take care of the edge case in coarse transformer text conditioned training, where the raw wave is resampled at different frequencies. autodetermine how to route based on length
 
 ## Citations
 
