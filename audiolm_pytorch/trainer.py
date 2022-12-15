@@ -103,7 +103,7 @@ def determine_types(data, config):
         else:
             raise TypeError(f'unable to determine type of {data}')
 
-    return tuple(output)
+    return tuple(set(output))
 
 # main trainer class
 
