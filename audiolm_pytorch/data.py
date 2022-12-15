@@ -92,7 +92,8 @@ def collate_one_or_multiple_tensors(fn):
         is_one_data = not isinstance(data[0], tuple)
 
         if is_one_data:
-            data = (data,)
+            data = torch.stack(data)
+            return (data,)
 
         outputs = []
         for datum in zip(*data):
