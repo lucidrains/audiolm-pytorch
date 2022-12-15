@@ -263,7 +263,7 @@ class SoundStreamTrainer(nn.Module):
         # update vae (generator)
 
         for _ in range(self.grad_accum_every):
-            wave = next(self.dl_iter)
+            wave, = next(self.dl_iter)
             wave = wave.to(device)
 
             loss, (recon_loss, *_) = self.soundstream(wave, return_loss_breakdown = True)
@@ -284,7 +284,7 @@ class SoundStreamTrainer(nn.Module):
         # update discriminator
 
         for _ in range(self.grad_accum_every):
-            wave = next(self.dl_iter)
+            wave, = next(self.dl_iter)
             wave = wave.to(device)
 
             discr_losses = self.soundstream(
@@ -337,7 +337,7 @@ class SoundStreamTrainer(nn.Module):
             for model, filename in ((self.ema_soundstream.ema_model, f'{steps}.ema'), (self.soundstream, str(steps))):
                 model.eval()
 
-                wave = next(self.valid_dl_iter)
+                wave, = next(self.valid_dl_iter)
                 wave = wave.to(device)
 
                 recons = model(wave, return_recons_only = True)
