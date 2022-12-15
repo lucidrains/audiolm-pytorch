@@ -61,7 +61,7 @@ class SoundDataset(Dataset):
             data = data[:, start:start + self.max_length]
 
         else:
-            data = torch.nn.functional.pad(data, (self.max_length - data.size(1), 0), 'constant')
+            data = torch.nn.functional.pad(data, (0, self.max_length - data.size(1)), 'constant')
         
         data = rearrange(data, '1 ... -> ...')
 
