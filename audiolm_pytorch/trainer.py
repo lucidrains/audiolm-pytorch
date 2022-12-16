@@ -345,7 +345,7 @@ class SoundStreamTrainer(nn.Module):
                 milestone = steps // self.save_results_every
 
                 for ind, recon in enumerate(recons.unbind(dim = 0)):
-                    filename = str(self.results_folder / f'sample.flac')
+                    filename = str(self.results_folder / f'sample_{steps}.flac')
                     torchaudio.save(filename, recon.cpu().detach(), DEFAULT_SAMPLE_RATE)
 
             self.print(f'{steps}: saving to {str(self.results_folder)}')
