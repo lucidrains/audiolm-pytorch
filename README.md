@@ -364,3 +364,13 @@ sample = trainer.generate(text = ['sound of rain drops on the rooftops'], batch_
     note    = {under review}
 }
 ```
+
+```bibtex
+@article{Li2021LocalViTBL,
+    title   = {LocalViT: Bringing Locality to Vision Transformers},
+    author  = {Yawei Li and K. Zhang and Jie Cao and Radu Timofte and Luc Van Gool},
+    journal = {ArXiv},
+    year    = {2021},
+    volume  = {abs/2104.05707}
+}
+```

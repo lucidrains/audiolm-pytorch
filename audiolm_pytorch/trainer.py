@@ -4,7 +4,7 @@ from random import choice
 from pathlib import Path
 from shutil import rmtree
 
-from typing import Union, List, Optional, Tuple
+from beartype.typing import Union, List, Optional, Tuple
 from typing_extensions import Annotated
 
 from beartype import beartype

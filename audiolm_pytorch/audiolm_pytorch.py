@@ -1,7 +1,7 @@
 import math
 from functools import partial
 
-from typing import Optional, Union, List
+from beartype.typing import Optional, Union, List
 from beartype import beartype
 
 import torch
@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 
 from einops import rearrange, repeat, reduce
+from einops.layers.torch import Rearrange
 
 from audiolm_pytorch.vq_wav2vec import FairseqVQWav2Vec
 from audiolm_pytorch.hubert_kmeans import HubertWithKmeans
@@ -203,6 +204,17 @@ class RelativePositionBias(nn.Module):
 
 # feedforward
 
+class CausalDSConv(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.ds_conv = nn.Conv1d(dim, dim, 3, bias = False, groups = dim)
+
+    def forward(self, x):
+        x = rearrange(x, 'b n c -> b c n')
+        x = F.pad(x, (2, 0))
+        x = self.ds_conv(x)
+        return rearrange(x, 'b c n -> b n c')
+
 class GEGLU(nn.Module):
     def forward(self, x):
         x, gate = x.chunk(2, dim = -1)
@@ -213,6 +225,7 @@ def FeedForward(dim, mult = 4, dropout = 0.1):
     return nn.Sequential(
         LayerNorm(dim),
         nn.Linear(dim, inner_dim * 2, bias = False),
+        CausalDSConv(inner_dim * 2),
         GEGLU(),
         LayerNorm(inner_dim),
         nn.Dropout(dropout),

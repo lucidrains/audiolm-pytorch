@@ -1,7 +1,7 @@
 from pathlib import Path
 from functools import partial, wraps
 
-from typing import Tuple
+from beartype.typing import Tuple
 from beartype.door import is_bearable
 
 import torchaudio
