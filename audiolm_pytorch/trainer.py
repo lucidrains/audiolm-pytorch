@@ -229,6 +229,7 @@ class SoundStreamTrainer(nn.Module):
         pkg = dict(
             model = self.soundstream.state_dict(),
             ema_model = self.ema_soundstream.state_dict(),
+            optim = self.optim.state_dict(),
             discr_optim = self.discr_optim.state_dict()
         )
 
@@ -245,6 +246,7 @@ class SoundStreamTrainer(nn.Module):
 
         self.soundstream.load_state_dict(pkg['model'])
         self.ema_soundstream.load_state_dict(pkg['ema_model'])
+        self.optim.load_state_dict(pkg['optim'])
         self.discr_optim.load_state_dict(pkg['discr_optim'])
 
         for key, _ in self.multiscale_discriminator_iter():
