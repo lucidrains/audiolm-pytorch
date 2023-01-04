@@ -136,7 +136,7 @@ class SoundStreamTrainer(nn.Module):
         self.accelerator = Accelerator(**accelerate_kwargs)
 
         self.soundstream = soundstream
-        self.ema_soundstream = EMA(soundstream, beta=ema_beta, update_after_step = ema_update_after_step, update_every = ema_update_every)
+        self.ema_soundstream = EMA(soundstream, beta = ema_beta, update_after_step = ema_update_after_step, update_every = ema_update_every)
 
         self.register_buffer('steps', torch.Tensor([0]))
 
@@ -224,6 +224,32 @@ class SoundStreamTrainer(nn.Module):
             rmtree(str(self.results_folder))
 
         self.results_folder.mkdir(parents = True, exist_ok = True)
+
+    def save(self, path):
+        pkg = dict(
+            model = self.soundstream.state_dict(),
+            ema_model = self.ema_soundstream.state_dict(),
+            discr_optim = self.discr_optim.state_dict()
+        )
+
+        for key, _ in self.multiscale_discriminator_iter():
+            discr_optim = getattr(self, key)
+            pkg[key] = discr_optim.state_dict()
+
+        torch.save(pkg, path)
+
+    def load(self, path):
+        path = Path(path)
+        assert path.exists()
+        pkg = torch.load(str(path))
+
+        self.soundstream.load_state_dict(pkg['model'])
+        self.ema_soundstream.load_state_dict(pkg['ema_model'])
+        self.discr_optim.load_state_dict(pkg['discr_optim'])
+
+        for key, _ in self.multiscale_discriminator_iter():
+            discr_optim = getattr(self, key)
+            discr_optim.load_state_dict(pkg[key])
 
     def multiscale_discriminator_iter(self):
         for ind, discr in enumerate(self.soundstream.discriminators):
@@ -485,6 +511,21 @@ class SemanticTransformerTrainer(nn.Module):
 
         self.results_folder.mkdir(parents = True, exist_ok = True)
 
+    def save(self, path):
+        pkg = dict(
+            model = self.transformer.state_dict(),
+            optim = self.optim.state_dict()
+        )
+        torch.save(pkg, path)
+
+    def load(self, path):
+        path = Path(path)
+        assert path.exists()
+        pkg = torch.load(str(path))
+
+        self.transformer.load_state_dict(pkg['model'])
+        self.optim.load_state_dict(pkg['optim'])
+
     def print(self, msg):
         self.accelerator.print(msg)
 
@@ -698,6 +739,21 @@ class CoarseTransformerTrainer(nn.Module):
 
         self.train_wrapper.to(self.device)
 
+    def save(self, path):
+        pkg = dict(
+            model = self.transformer.state_dict(),
+            optim = self.optim.state_dict()
+        )
+        torch.save(pkg, path)
+
+    def load(self, path):
+        path = Path(path)
+        assert path.exists()
+        pkg = torch.load(str(path))
+
+        self.transformer.load_state_dict(pkg['model'])
+        self.optim.load_state_dict(pkg['optim'])
+
     def print(self, msg):
         self.accelerator.print(msg)
 
@@ -903,6 +959,21 @@ class FineTransformerTrainer(nn.Module):
         self.results_folder.mkdir(parents = True, exist_ok = True)
 
         self.train_wrapper.to(self.device)
+
+    def save(self, path):
+        pkg = dict(
+            model = self.transformer.state_dict(),
+            optim = self.optim.state_dict()
+        )
+        torch.save(pkg, path)
+
+    def load(self, path):
+        path = Path(path)
+        assert path.exists()
+        pkg = torch.load(str(path))
+
+        self.transformer.load_state_dict(pkg['model'])
+        self.optim.load_state_dict(pkg['optim'])
 
     def print(self, msg):
         self.accelerator.print(msg)
