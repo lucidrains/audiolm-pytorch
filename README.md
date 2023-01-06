@@ -173,6 +173,8 @@ generated_wav_with_text_condition = audiolm(text = ['chirping of birds and the d
 
 ## Text Conditioned Audio Synthesis
 
+Update: Looks like this will work, given <a href="https://valle-demo.github.io/">'VALL-E'</a>
+
 ex. Semantic Transformer
 
 ```python
@@ -232,7 +234,6 @@ trainer.train()
 sample = trainer.generate(text = ['sound of rain drops on the rooftops'], batch_size = 1, max_length = 2) # (1, < 128) - may terminate early if it detects [eos]
 
 ```
-
 
 ## Appreciation
 
