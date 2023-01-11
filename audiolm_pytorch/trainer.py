@@ -305,7 +305,7 @@ class SoundStreamTrainer(nn.Module):
 
             accum_log(logs, dict(
                 loss = loss.item() / self.grad_accum_every,
-                recon_loss = recon_loss / self.grad_accum_every
+                recon_loss = recon_loss.item() / self.grad_accum_every
             ))
 
         if exists(self.max_grad_norm):
@@ -521,7 +521,7 @@ class SemanticTransformerTrainer(nn.Module):
         self.results_folder.mkdir(parents = True, exist_ok = True)
         
         hps = {"num_train_steps": num_train_steps, "data_max_length": data_max_length, "learning_rate": lr}
-        self.accelerator.init_trackers("semenatic", config=hps)
+        self.accelerator.init_trackers("semantic", config=hps)
 
     def save(self, path):
         pkg = dict(
