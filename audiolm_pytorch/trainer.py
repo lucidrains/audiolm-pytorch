@@ -242,13 +242,16 @@ class SoundStreamTrainer(nn.Module):
 
         torch.save(pkg, path)
 
+    @property
+    def unwrapped_soundstream(self):
+        return self.accelerator.unwrap_model(self.soundstream)
+
     def load(self, path):
         path = Path(path)
         assert path.exists()
         pkg = torch.load(str(path))
 
-        soundstream = self.accelerator.unwrap_model(self.soundstream)
-        soundstream.load_state_dict(pkg['model'])
+        self.unwrapped_soundstream.load_state_dict(pkg['model'])
 
         self.ema_soundstream.load_state_dict(pkg['ema_model'])
         self.optim.load_state_dict(pkg['optim'])
@@ -259,7 +262,7 @@ class SoundStreamTrainer(nn.Module):
             discr_optim.load_state_dict(pkg[key])
 
     def multiscale_discriminator_iter(self):
-        for ind, discr in enumerate(self.soundstream.discriminators):
+        for ind, discr in enumerate(self.unwrapped_soundstream.discriminators):
             yield f'multiscale_discr_optimizer_{ind}', discr
 
     def print(self, msg):
