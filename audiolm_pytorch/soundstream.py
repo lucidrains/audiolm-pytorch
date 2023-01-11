@@ -413,7 +413,7 @@ class SoundStream(nn.Module):
             if self.single_channel:
                 real, fake = orig_x.clone(), recon_x.detach()
                 stft_real_logits, stft_fake_logits = map(self.stft_discriminator, (real.requires_grad_(), fake))
-                stft_discr_loss = (hinge_discr_loss(stft_fake_logits.real, stft_real_logits.real) + hinge_discr_loss(stft_fake_logits.imag, stft_real_logits.imag)) / 2
+                stft_discr_loss = hinge_discr_loss(stft_fake_logits, stft_real_logits)
 
                 if apply_grad_penalty:
                     stft_grad_penalty = gradient_penalty(real, stft_discr_loss)
