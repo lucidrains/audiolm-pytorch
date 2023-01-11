@@ -39,6 +39,8 @@ from audiolm_pytorch.data import SoundDataset, get_dataloader
 
 from accelerate import Accelerator
 
+from torch.utils.tensorboard import SummaryWriter
+
 # constants
 
 DEFAULT_SAMPLE_RATE = 16000
@@ -225,6 +227,8 @@ class SoundStreamTrainer(nn.Module):
 
         self.results_folder.mkdir(parents = True, exist_ok = True)
 
+        self.tensorboard_writer = SummaryWriter(log_dir = results_folder + "/tensorboard")
+
     def save(self, path):
         pkg = dict(
             model = self.accelerator.get_state_dict(self.soundstream),
@@ -344,6 +348,8 @@ class SoundStreamTrainer(nn.Module):
         # build pretty printed losses
 
         losses_str = f"{steps}: soundstream total loss: {logs['loss']:.3f}, soundstream recon loss: {logs['recon_loss']:.3f}"
+        self.tensorboard_writer.add_scalar('Loss/total', logs['loss'], steps)
+        self.tensorboard_writer.add_scalar('Loss/recon', logs['recon_loss'], steps)
 
         for key, loss in logs.items():
             if not key.startswith('scale:'):
@@ -351,6 +357,7 @@ class SoundStreamTrainer(nn.Module):
             _, scale_factor = key.split(':')
 
             losses_str += f" | discr (scale {scale_factor}) loss: {loss:.3f}"
+            self.tensorboard_writer.add_scalar(f'Loss/discr scale {scale_factor}', loss, steps)
 
         # log
 
@@ -376,7 +383,9 @@ class SoundStreamTrainer(nn.Module):
 
                 for ind, recon in enumerate(recons.unbind(dim = 0)):
                     filename = str(self.results_folder / f'sample_{steps}.flac')
-                    torchaudio.save(filename, recon.cpu().detach(), DEFAULT_SAMPLE_RATE)
+                    snd_tensor = recon.cpu().detach()
+                    torchaudio.save(filename, snd_tensor, DEFAULT_SAMPLE_RATE)
+                    self.tensorboard_writer.add_audio(f'sample_{steps}', snd_tensor, sample_rate=DEFAULT_SAMPLE_RATE)
 
             self.print(f'{steps}: saving to {str(self.results_folder)}')
 
@@ -514,6 +523,8 @@ class SemanticTransformerTrainer(nn.Module):
             rmtree(str(self.results_folder))
 
         self.results_folder.mkdir(parents = True, exist_ok = True)
+        
+        self.tensorboard_writer = SummaryWriter(log_dir = results_folder + "/tensorboard")
 
     def save(self, path):
         pkg = dict(
@@ -591,6 +602,7 @@ class SemanticTransformerTrainer(nn.Module):
         # log
 
         self.print(f"{steps}: loss: {logs['loss']}")
+        self.tensorboard_writer.add_scalar('Loss/train', logs['loss'], steps)
 
         # sample results every so often
 
@@ -602,6 +614,7 @@ class SemanticTransformerTrainer(nn.Module):
                 valid_loss = self.train_wrapper(**data_kwargs, return_loss = True)
 
             self.print(f'{steps}: valid loss {valid_loss}')
+            self.tensorboard_writer.add_scalar('Loss/valid', valid_loss, steps)
 
         # save model every so often
 
@@ -741,6 +754,8 @@ class CoarseTransformerTrainer(nn.Module):
             rmtree(str(self.results_folder))
 
         self.results_folder.mkdir(parents = True, exist_ok = True)
+        
+        self.tensorboard_writer = SummaryWriter(log_dir = results_folder + "/tensorboard")
 
         self.train_wrapper.to(self.device)
 
@@ -817,6 +832,7 @@ class CoarseTransformerTrainer(nn.Module):
         # log
 
         self.print(f"{steps}: loss: {logs['loss']}")
+        self.tensorboard_writer.add_scalar('Loss/train', logs['loss'], steps)
 
         # sample results every so often
 
@@ -832,6 +848,7 @@ class CoarseTransformerTrainer(nn.Module):
                 )
 
             self.print(f'{steps}: valid loss {valid_loss}')
+            self.tensorboard_writer.add_scalar('Loss/valid', valid_loss, steps)
 
         # save model every so often
 
@@ -964,6 +981,8 @@ class FineTransformerTrainer(nn.Module):
             rmtree(str(self.results_folder))
 
         self.results_folder.mkdir(parents = True, exist_ok = True)
+        
+        self.tensorboard_writer = SummaryWriter(log_dir = results_folder + "/tensorboard")
 
         self.train_wrapper.to(self.device)
 
@@ -1043,6 +1062,7 @@ class FineTransformerTrainer(nn.Module):
         # log
 
         self.print(f"{steps}: loss: {logs['loss']}")
+        self.tensorboard_writer.add_scalar('Loss/train', logs['loss'], steps)
 
         # sample results every so often
 
@@ -1054,6 +1074,7 @@ class FineTransformerTrainer(nn.Module):
                 valid_loss = self.train_wrapper(**data_kwargs, return_loss = True)
 
             self.print(f'{steps}: valid loss {valid_loss}')
+            self.tensorboard_writer.add_scalar('Loss/valid', valid_loss, steps)
 
         # save model every so often
 
