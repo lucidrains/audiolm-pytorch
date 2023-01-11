@@ -164,7 +164,7 @@ class STFTDiscriminator(nn.Module):
 
         x = self.stft(x)
         x = rearrange(x, 'b ... -> b 1 ...')
-        x = torch.cat((x.real, x.imag), dim = 1).detach()
+        x = torch.cat((x.real, x.imag), dim = 1)
 
         intermediates = []
 
