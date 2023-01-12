@@ -355,7 +355,12 @@ class SoundStream(nn.Module):
         self.load_state_dict(torch.load(str(path)))
 
     def non_discr_parameters(self):
-        return [*self.encoder.parameters(), *self.decoder.parameters()]
+        return [
+            *self.encoder.parameters(),
+            *self.decoder.parameters(),
+            *self.encoder_attn.parameters(),
+            *self.decoder_attn.parameters()
+        ]
 
     @property
     def seq_len_multiple_of(self):

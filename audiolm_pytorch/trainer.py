@@ -319,6 +319,8 @@ class SoundStreamTrainer(nn.Module):
 
         # update discriminator
 
+        self.discr_optim.zero_grad()
+
         for _ in range(self.grad_accum_every):
             wave, = next(self.dl_iter)
             wave = wave.to(device)
@@ -340,7 +342,6 @@ class SoundStreamTrainer(nn.Module):
         # gradient step for all discriminators
 
         self.discr_optim.step()
-        self.discr_optim.zero_grad()
 
         for ind in range(len(self.soundstream.discriminators)):
             discr_optimizer = getattr(self, f'multiscale_discr_optimizer_{ind}')
