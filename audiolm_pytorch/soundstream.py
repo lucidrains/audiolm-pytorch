@@ -250,6 +250,7 @@ def DecoderBlock(chan_in, chan_out, stride):
         ResidualUnit(chan_out, chan_out, 9),
     )
 
+@beartype
 class SoundStream(nn.Module):
     def __init__(
         self,

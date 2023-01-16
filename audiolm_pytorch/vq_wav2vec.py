@@ -18,6 +18,7 @@ logging.root.setLevel(logging.ERROR)
 def exists(val):
     return val is not None
 
+@beartype
 class FairseqVQWav2Vec(nn.Module):
     """
     checkpoint path can be found at https://github.com/facebookresearch/fairseq/blob/main/examples/wav2vec/README.md#vq-wav2vec
