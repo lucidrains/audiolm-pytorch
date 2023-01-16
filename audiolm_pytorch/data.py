@@ -26,6 +26,15 @@ def cast_tuple(val, length = 1):
 # dataset functions
 
 class SoundDataset(Dataset):
+    """A dataset for loading sound files from a given folder.
+
+    Args:
+        folder (str): The path to the folder containing the sound files. Can contain nested folders as long as audio file extensions match those in exts.
+        exts (list): A list of strings representing the file extensions to search for.
+        max_length (int): The maximum number of samples of audio that can be loaded.
+        target_sample_hz (tuple): Sampling frequencies to use for each section of audio.
+        seq_len_multiple_of (int): The sequence length (in samples) will be a multiple of this number (truncating the data if necessary).
+    """
     def __init__(
         self,
         folder,
