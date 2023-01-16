@@ -1,6 +1,8 @@
 import functools
 from pathlib import Path
 from functools import partial
+from beartype import beartype
+from beartype.typing import Tuple, Union, Optional
 
 import torch
 from torch import nn, einsum

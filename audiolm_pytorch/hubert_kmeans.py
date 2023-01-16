@@ -1,4 +1,6 @@
 from pathlib import Path
+from beartype import beartype
+from beartype.typing import Tuple, Union, Optional
 
 import torch
 from torch import nn
@@ -18,6 +20,7 @@ logging.root.setLevel(logging.ERROR)
 def exists(val):
     return val is not None
 
+@beartype
 class HubertWithKmeans(nn.Module):
     """
     checkpoint and kmeans can be downloaded at https://github.com/facebookresearch/fairseq/tree/main/examples/hubert
