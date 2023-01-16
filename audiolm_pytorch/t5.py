@@ -2,6 +2,9 @@ import torch
 import transformers
 from transformers import T5Tokenizer, T5EncoderModel, T5Config
 
+from beartype import beartype
+from typing import Union, List
+
 # less warning messages since only using encoder
 
 transformers.logging.set_verbosity_error()
@@ -61,11 +64,15 @@ def get_encoded_dim(name):
 
 # encoding text
 
+@beartype
 def t5_encode_text(
-    texts,
+    texts: Union[str, List[str]],
     name = DEFAULT_T5_NAME,
     output_device = None
 ):
+    if isinstance(texts, str):
+        texts = [texts]
+
     t5, tokenizer = get_model_and_tokenizer(name)
 
     if torch.cuda.is_available():
