@@ -1,7 +1,8 @@
 from pathlib import Path
 from functools import partial, wraps
 
-from beartype.typing import Tuple
+from beartype import beartype
+from beartype.typing import Tuple, Union, Optional
 from beartype.door import is_bearable
 
 import torchaudio
@@ -25,13 +26,14 @@ def cast_tuple(val, length = 1):
 
 # dataset functions
 
+@beartype
 class SoundDataset(Dataset):
     def __init__(
         self,
         folder,
         exts = ['flac', 'wav'],
         max_length = None,
-        target_sample_hz = None,
+        target_sample_hz: Optional[Tuple[Optional[int], ...]] = None,
         seq_len_multiple_of = None
     ):
         super().__init__()
