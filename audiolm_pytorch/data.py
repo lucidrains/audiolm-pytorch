@@ -68,8 +68,9 @@ class SoundDataset(Dataset):
         num_outputs = len(self.target_sample_hz)
         data = cast_tuple(data, num_outputs)
 
-        if exists(self.target_sample_hz):
-            data = tuple(resample(d, sample_hz, target_sample_hz) for d, target_sample_hz in zip(data, self.target_sample_hz))
+        # resample if target_sample_hz is not None in the tuple
+
+        data = tuple((resample(d, sample_hz, target_sample_hz) if exists(target_sample_hz) else d) for d, target_sample_hz in zip(data, self.target_sample_hz))
 
         if exists(self.max_length):
             data = tuple(d[:self.max_length] for d in data)
