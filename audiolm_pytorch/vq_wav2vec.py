@@ -27,7 +27,7 @@ class FairseqVQWav2Vec(nn.Module):
     def __init__(
         self,
         checkpoint_path,
-        target_sample_hz = 24000,
+        target_sample_hz: Optional[Tuple[Optional[int], ...]]  = (24000,),
         seq_len_multiple_of = None
     ):
         super().__init__()

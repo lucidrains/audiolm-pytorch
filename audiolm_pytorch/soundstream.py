@@ -266,7 +266,7 @@ class SoundStream(nn.Module):
         adversarial_loss_weight = 1.,
         feature_loss_weight = 100,
         quantize_dropout_cutoff_index = 1,
-        target_sample_hz = 24000,
+        target_sample_hz: Optional[Tuple[Optional[int], ...]] = (24000,),
         attn_window_size = 128,
         attn_dim_head = 64,
         attn_heads = 8

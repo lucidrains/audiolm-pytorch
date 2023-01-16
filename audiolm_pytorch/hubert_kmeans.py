@@ -28,7 +28,7 @@ class HubertWithKmeans(nn.Module):
         self,
         checkpoint_path,
         kmeans_path,
-        target_sample_hz = 50000,
+        target_sample_hz: Optional[Tuple[Optional[int], ...]]  = (50000,),
         seq_len_multiple_of = None
     ):
         super().__init__()
