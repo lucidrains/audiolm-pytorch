@@ -33,7 +33,7 @@ class SoundDataset(Dataset):
         folder,
         exts = ['flac', 'wav'],
         max_length = None,
-        target_sample_hz: Optional[Tuple[Optional[int], ...]] = None,
+        target_sample_hz: Optional[Union[int, Tuple[Optional[int], ...]]] = None,
         seq_len_multiple_of = None
     ):
         super().__init__()
