@@ -9,6 +9,7 @@ import torchaudio
 from torchaudio.functional import resample
 
 import torch
+import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
 
@@ -57,35 +58,50 @@ class SoundDataset(Dataset):
 
         data, sample_hz = torchaudio.load(file)
         
-        if data.size(1) > self.max_length:
-            max_start = data.size(1) - self.max_length
-            start = torch.randint(0, max_start, (1, ))
-            data = data[:, start:start + self.max_length]
-
-        else:
-            data = torch.nn.functional.pad(data, (0, self.max_length - data.size(1)), 'constant')
-        
-        data = rearrange(data, '1 ... -> ...')
-
         num_outputs = len(self.target_sample_hz)
         data = cast_tuple(data, num_outputs)
 
         # resample if target_sample_hz is not None in the tuple
 
-        data = tuple((resample(d, sample_hz, target_sample_hz) if exists(target_sample_hz) else d) for d, target_sample_hz in zip(data, self.target_sample_hz))
+        data_tuple = tuple((resample(d, sample_hz, target_sample_hz) if exists(target_sample_hz) else d) for d, target_sample_hz in zip(data, self.target_sample_hz))
 
-        if exists(self.max_length):
-            data = tuple(d[:self.max_length] for d in data)
+        output = []
 
-        if exists(self.seq_len_multiple_of):
-            data = tuple(curtail_to_multiple(d, self.seq_len_multiple_of) for d in data)
+        # process each of the data resample at different frequencies individually
 
-        data = tuple(d.float() for d in data)
+        for data in data_tuple:
+            audio_length = data.size(1)
+
+            # pad or curtail
+
+            if audio_length > self.max_length:
+                max_start = audio_length - self.max_length
+                start = torch.randint(0, max_start, (1, ))
+                data = data[:, start:start + self.max_length]
+
+            else:
+                data = F.pad(data, (0, self.max_length - audio_length), 'constant')
+
+            data = rearrange(data, '1 ... -> ...')
+
+            if exists(self.max_length):
+                data = data[:self.max_length]
+
+            if exists(self.seq_len_multiple_of):
+                data = curtail_to_multiple(data, self.seq_len_multiple_of)
+
+            output.append(data.float())
+
+        # cast from list to tuple
+
+        output = tuple(output)
+
+        # return only one audio, if only one target resample freq
 
         if num_outputs == 1:
-            return data[0]
+            return output[0]
 
-        return data
+        return output
 
 # dataloader functions
 
