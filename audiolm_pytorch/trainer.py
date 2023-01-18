@@ -130,6 +130,7 @@ class SoundStreamTrainer(nn.Module):
         ema_update_after_step = 500,
         ema_update_every = 10,
         apply_grad_penalty_every = 4,
+        dl_num_workers = 0,
         accelerate_kwargs: dict = dict()
     ):
         super().__init__()
@@ -181,9 +182,9 @@ class SoundStreamTrainer(nn.Module):
 
         # dataloader
 
-        self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True)
+        self.dl = get_dataloader(self.ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True)
 
-        self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, shuffle = True)
+        self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True)
 
         # prepare with accelerator
 
