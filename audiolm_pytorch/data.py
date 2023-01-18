@@ -65,7 +65,9 @@ class SoundDataset(Dataset):
         file = self.files[idx]
 
         data, sample_hz = torchaudio.load(file)
-        
+
+        assert data.numel() > 0, f'one of your audio file ({file}) is empty. please remove it from your folder'
+
         num_outputs = len(self.target_sample_hz)
         data = cast_tuple(data, num_outputs)
 

@@ -267,6 +267,7 @@ class SoundStream(nn.Module):
         feature_loss_weight = 100,
         quantize_dropout_cutoff_index = 1,
         target_sample_hz = 24000,
+        use_local_attn = True,
         attn_window_size = 128,
         attn_dim_head = 64,
         attn_heads = 8
@@ -301,7 +302,7 @@ class SoundStream(nn.Module):
             causal = True
         )
 
-        self.encoder_attn = LocalMHA(**attn_kwargs)
+        self.encoder_attn = LocalMHA(**attn_kwargs) if use_local_attn else None
 
         self.rq = ResidualVQ(
             dim = codebook_dim,
@@ -315,7 +316,7 @@ class SoundStream(nn.Module):
             quantize_dropout_cutoff_index = quantize_dropout_cutoff_index
         )
 
-        self.decoder_attn = LocalMHA(**attn_kwargs)
+        self.decoder_attn = LocalMHA(**attn_kwargs) if use_local_attn else None
 
         decoder_blocks = []
 
@@ -390,11 +391,15 @@ class SoundStream(nn.Module):
         x = self.encoder(x)
 
         x = rearrange(x, 'b c n -> b n c')
-        x = self.encoder_attn(x) + x
+
+        if exists(self.encoder_attn):
+            x = self.encoder_attn(x) + x
 
         x, indices, commit_loss = self.rq(x)
 
-        x = self.decoder_attn(x) + x
+        if exists(self.decoder_attn):
+            x = self.decoder_attn(x) + x
+
         x = rearrange(x, 'b n c -> b c n')
 
         if return_encoded:
