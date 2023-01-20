@@ -389,3 +389,11 @@ sample = trainer.generate(text = ['sound of rain drops on the rooftops'], batch_
     primaryClass = {cs.CV}
 }
 ```
+
+```bibtex
+@inproceedings{Ma2022MegaMA,
+    title   = {Mega: Moving Average Equipped Gated Attention},
+    author  = {Xuezhe Ma and Chunting Zhou and Xiang Kong and Junxian He and Liangke Gui and Graham Neubig and Jonathan May and Luke Zettlemoyer},
+    year    = {2022}
+}
+```
