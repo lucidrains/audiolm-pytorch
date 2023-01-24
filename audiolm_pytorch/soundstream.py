@@ -246,10 +246,10 @@ class CausalConvTranspose1d(nn.Module):
 
 def ResidualUnit(chan_in, chan_out, dilation, kernel_size = 7):
     return Residual(nn.Sequential(
-        nn.ELU(),
         CausalConv1d(chan_in, chan_out, kernel_size, dilation = dilation),
         nn.ELU(),
         CausalConv1d(chan_out, chan_out, 1),
+        nn.ELU()
     ))
 
 def EncoderBlock(chan_in, chan_out, stride, cycle_dilations = (1, 3, 9)):
@@ -258,7 +258,6 @@ def EncoderBlock(chan_in, chan_out, stride, cycle_dilations = (1, 3, 9)):
         ResidualUnit(chan_in, chan_in, next(it)),
         ResidualUnit(chan_in, chan_in, next(it)),
         ResidualUnit(chan_in, chan_in, next(it)),
-        nn.ELU(),
         CausalConv1d(chan_in, chan_out, 2 * stride, stride = stride)
     )
 
@@ -269,7 +268,6 @@ def DecoderBlock(chan_in, chan_out, stride, cycle_dilations = (1, 3, 9)):
 
     it = cycle(cycle_dilations)
     return nn.Sequential(
-        nn.ELU(),
         CausalConvTranspose1d(chan_in, chan_out, 2 * stride, stride = stride),
         ResidualUnit(chan_out, chan_out, next(it)),
         ResidualUnit(chan_out, chan_out, next(it)),
