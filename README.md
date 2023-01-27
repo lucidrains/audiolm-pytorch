@@ -10,6 +10,8 @@ Please join <a href="https://discord.gg/xBPBXfcFHd"><img alt="Join us on Discord
 
 This repository now also contains a MIT licensed version of <a href="https://arxiv.org/abs/2107.03312">SoundStream</a>. Once <a href="https://github.com/facebookresearch/encodec">EnCodec</a> becomes MIT licensed, then I will consider adding a wrapper for that as well for use here.
 
+Update: AudioLM was essentially used to 'solve' music generation in the new <a href="https://github.com/lucidrains/audiolm-pytorch">MusicLM</a>
+
 ## Install
 
 ```bash
