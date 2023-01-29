@@ -250,6 +250,8 @@ sample = trainer.generate(text = ['sound of rain drops on the rooftops'], batch_
 
 - <a href="https://github.com/eonglints">@eonglints</a> for offering his professional advice and expertise as well as pull requests!
 
+- <a href="https://github.com/djqualia">@djqualia</a>, <a href="https://github.com/yigityu">@yigityu</a>, and <a href="https://github.com/BlackFox1197">@BlackFox1197</a> for helping with the debugging of soundstream
+
 ## Todo
 
 - [x] complete CoarseTransformer
