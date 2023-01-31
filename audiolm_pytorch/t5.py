@@ -3,7 +3,7 @@ import transformers
 from transformers import T5Tokenizer, T5EncoderModel, T5Config
 
 from beartype import beartype
-from typing import Union, List
+from beartype.typing import Union, List
 
 # less warning messages since only using encoder
 
