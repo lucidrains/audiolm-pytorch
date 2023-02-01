@@ -241,8 +241,8 @@ class ComplexModReLU(nn.Module):
     def forward(self, x):
         real, imag = x.unbind(dim = 1)
 
-        x_abs = (real ** 2 + imag ** 2).clamp(min = 1e-5).sqrt()
-        x_angle = torch.atan(imag / real.clamp(min = 1e-5))
+        x_abs = (real ** 2 + imag ** 2).clamp(min = 1e-8).sqrt()
+        x_angle = torch.atan2(imag, real)
 
         new_real = F.relu(x_abs + self.b)
         new_imag = x_angle.exp()
