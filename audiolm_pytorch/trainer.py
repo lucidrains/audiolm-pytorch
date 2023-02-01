@@ -116,7 +116,7 @@ class SoundStreamTrainer(nn.Module):
         batch_size,
         data_max_length = None,
         folder,
-        lr = 3e-4,
+        lr = 2e-4,
         grad_accum_every = 4,
         wd = 0.,
         max_grad_norm = 0.5,

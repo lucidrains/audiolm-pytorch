@@ -462,7 +462,7 @@ class SoundStream(nn.Module):
         attn_window_size = 128,
         attn_dim_head = 64,
         attn_heads = 8,
-        use_complex_stft_discriminator = True
+        use_complex_stft_discriminator = False
     ):
         super().__init__()
         self.target_sample_hz = target_sample_hz # for resampling on the fly
