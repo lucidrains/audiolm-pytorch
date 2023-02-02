@@ -349,7 +349,8 @@ class SoundStream(nn.Module):
         mhesa_dim_head = 32,
         attn_window_size = 128,
         attn_dim_head = 64,
-        attn_heads = 8
+        attn_heads = 8,
+        attn_depth = 1,
     ):
         super().__init__()
         self.target_sample_hz = target_sample_hz # for resampling on the fly
@@ -386,7 +387,7 @@ class SoundStream(nn.Module):
             causal = True
         )
 
-        self.encoder_attn = LocalTransformerBlock(**attn_kwargs) if use_local_attn else None
+        self.encoder_attn = nn.Sequential(*[LocalTransformerBlock(**attn_kwargs) for _ in range(attn_depth)]) if use_local_attn else None
 
         self.rq = ResidualVQ(
             dim = codebook_dim,
@@ -400,7 +401,7 @@ class SoundStream(nn.Module):
             quantize_dropout_cutoff_index = quantize_dropout_cutoff_index
         )
 
-        self.decoder_attn = LocalTransformerBlock(**attn_kwargs) if use_local_attn else None
+        self.decoder_attn = nn.Sequential(*[LocalTransformerBlock(**attn_kwargs) for _ in range(attn_depth)]) if use_local_attn else None
 
         decoder_blocks = []
 
