@@ -21,6 +21,7 @@ from audiolm_pytorch.t5 import t5_encode_text, get_encoded_dim, DEFAULT_T5_NAME
 from torchaudio.functional import resample
 
 from audiolm_pytorch.soundstream import SoundStream
+from audiolm_pytorch.utils import AudioConditionerBase
 
 from tqdm import tqdm
 
@@ -424,21 +425,10 @@ class Transformer(nn.Module):
 
         return self.norm(x)
 
-# bases
-
-class SemanticBase(nn.Module):
-    pass
-
-class CoarseBase(nn.Module):
-    pass
-
-class FineBase(nn.Module):
-    pass
-
 # the three hierarchical transformers
 
 @beartype
-class SemanticTransformer(SemanticBase):
+class SemanticTransformer(nn.Module):
     def __init__(
         self,
         *,
@@ -553,7 +543,7 @@ class SemanticTransformer(SemanticBase):
         return self.to_logits(tokens)
 
 @beartype
-class CoarseTransformer(CoarseBase):
+class CoarseTransformer(nn.Module):
     def __init__(
         self,
         *,
@@ -721,7 +711,7 @@ class CoarseTransformer(CoarseBase):
 
         return semantic_logits, coarse_logits
 
-class FineTransformer(FineBase):
+class FineTransformer(nn.Module):
     def __init__(
         self,
         *,
@@ -917,6 +907,7 @@ class SemanticTransformerWrapper(nn.Module):
         *,
         transformer: SemanticTransformer,
         wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
+        audio_conditioner: Optional[AudioConditionerBase] = None,
         pad_id = -1,
         unique_consecutive = True,
         mask_prob = 0.15
@@ -924,6 +915,8 @@ class SemanticTransformerWrapper(nn.Module):
         super().__init__()
         self.wav2vec = wav2vec
         self.transformer = transformer
+        self.audio_conditioner = audio_conditioner
+
         assert not exists(self.wav2vec) or self.wav2vec.codebook_size == transformer.num_semantic_tokens, f'num_semantic_tokens on SemanticTransformer must be set to {self.wav2vec.codebook_size}'
 
         self.unique_consecutive = unique_consecutive
@@ -968,6 +961,12 @@ class SemanticTransformerWrapper(nn.Module):
 
         if self.unique_consecutive:
             ids = batch_unique_consecutive(ids, pad_value = self.pad_id)
+
+        # derive joint audio-text embeddings if needed
+
+        if exists(self.audio_conditioner) and exists(prime_wave):
+            assert not exists(text) and not exists(text_embeds)
+            text_embeds = self.audio_conditioner(prime_wave)
 
         # derive text embeddings if needed
 
@@ -1028,6 +1027,11 @@ class SemanticTransformerWrapper(nn.Module):
     ):
         assert exists(raw_wave) or exists(semantic_token_ids), 'either raw waveform (raw_wave) is given or semantic token ids are given (semantic_token_ids)'
 
+        if exists(self.audio_conditioner):
+            assert exists(raw_wave)
+            assert not exists(text) and not exists(text_embeds)
+            text_embeds = self.audio_conditioner(raw_wave)
+
         if not exists(semantic_token_ids):
             assert exists(self.wav2vec), 'VQWav2Vec must be be provided if given raw wave for training'
             semantic_token_ids = self.wav2vec(raw_wave, flatten = False)
@@ -1075,6 +1079,7 @@ class CoarseTransformerWrapper(nn.Module):
         transformer: CoarseTransformer,
         soundstream: Optional[SoundStream]  = None,
         wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
+        audio_conditioner: Optional[AudioConditionerBase] = None,
         pad_id = -1,
         unique_consecutive = True,
         semantic_cross_entropy_loss_weight = 1.,
@@ -1083,6 +1088,7 @@ class CoarseTransformerWrapper(nn.Module):
         super().__init__()
         self.soundstream = soundstream
         self.wav2vec = wav2vec
+        self.audio_conditioner = audio_conditioner
 
         self.transformer = transformer
         self.unique_consecutive = unique_consecutive
@@ -1177,6 +1183,8 @@ class CoarseTransformerWrapper(nn.Module):
         semantic_token_ids = None,
         raw_wave = None,
         raw_wave_for_soundstream = None,
+        text = None,
+        text_embeds = None,
         coarse_token_ids = None,
         return_loss = False,
         **kwargs
@@ -1187,6 +1195,11 @@ class CoarseTransformerWrapper(nn.Module):
         assert exists(raw_wave_for_soundstream) or exists(coarse_token_ids), 'either raw waveform (raw_wav) is given, or coarse and fine token ids (coarse_token_ids, fine_token_ids)'
 
         assert not all(map(exists, (raw_wave, raw_wave_for_soundstream, semantic_token_ids, coarse_token_ids)))
+
+        if exists(self.audio_conditioner):
+            assert exists(raw_wave)
+            assert not exists(text) and not exists(text_embeds)
+            text_embeds = self.audio_conditioner(raw_wave) # technically audio embeds, but shared text-audio joint embedding space for mulan
 
         if not exists(semantic_token_ids):
             assert exists(self.wav2vec), 'VQWav2Vec must be be provided if given raw wave for training'
@@ -1226,6 +1239,8 @@ class CoarseTransformerWrapper(nn.Module):
             semantic_token_ids = semantic_token_ids,
             coarse_token_ids = coarse_token_ids,
             self_attn_mask = self_attn_mask,
+            text = text,
+            text_embeds = text_embeds,
             **kwargs
         )
 
@@ -1271,6 +1286,7 @@ class FineTransformerWrapper(nn.Module):
         *,
         transformer: FineTransformer,
         soundstream: Optional[SoundStream] = None,
+        audio_conditioner: Optional[AudioConditionerBase] = None,
         coarse_cross_entropy_loss_weight = 1.,
         pad_id = -1,
         mask_prob = 0.15
@@ -1278,6 +1294,7 @@ class FineTransformerWrapper(nn.Module):
         super().__init__()
         self.soundstream = soundstream
         self.transformer = transformer
+        self.audio_conditioner = audio_conditioner
 
         self.num_fine_quantizers = transformer.num_fine_quantizers
         self.num_coarse_quantizers = transformer.num_coarse_quantizers
@@ -1391,6 +1408,8 @@ class FineTransformerWrapper(nn.Module):
         self,
         *,
         raw_wave = None,
+        text = None,
+        text_embeds = None,
         token_ids = None,
         coarse_token_ids = None,
         fine_token_ids = None,
@@ -1398,6 +1417,11 @@ class FineTransformerWrapper(nn.Module):
         **kwargs
     ):
         assert exists(raw_wave) ^ (exists(token_ids) ^ (exists(coarse_token_ids) and exists(fine_token_ids))), 'either raw waveform (raw_wav) is given, or coarse and fine token ids (coarse_token_ids, fine_token_ids)'
+
+        if exists(self.audio_conditioner):
+            assert exists(raw_wave)
+            assert not exists(text) and not exists(text_embeds)
+            text_embeds = self.audio_conditioner(raw_wave) # technically audio embeds, but shared text-audio joint embedding space for mulan
 
         if exists(raw_wave):
             assert exists(self.soundstream), 'SoundStream must be provided if given raw wave for training'
@@ -1432,6 +1456,8 @@ class FineTransformerWrapper(nn.Module):
             coarse_token_ids = coarse_token_ids,
             fine_token_ids = fine_token_ids,
             self_attn_mask = self_attn_mask,
+            text = text,
+            text_embeds = text_embeds,
             **kwargs
         )
 

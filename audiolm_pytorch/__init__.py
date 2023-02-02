@@ -1,7 +1,6 @@
 from audiolm_pytorch.audiolm_pytorch import AudioLM
 from audiolm_pytorch.soundstream import SoundStream
 
-from audiolm_pytorch.audiolm_pytorch import SemanticBase, CoarseBase, FineBase
 from audiolm_pytorch.audiolm_pytorch import SemanticTransformer, CoarseTransformer, FineTransformer
 from audiolm_pytorch.audiolm_pytorch import FineTransformerWrapper, CoarseTransformerWrapper, SemanticTransformerWrapper
 

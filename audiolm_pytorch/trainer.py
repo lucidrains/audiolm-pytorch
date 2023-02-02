@@ -25,9 +25,6 @@ from ema_pytorch import EMA
 from audiolm_pytorch.soundstream import SoundStream
 
 from audiolm_pytorch.audiolm_pytorch import (
-    SemanticBase,
-    CoarseBase,
-    FineBase,
     SemanticTransformer,
     SemanticTransformerWrapper,
     CoarseTransformer,
@@ -39,6 +36,7 @@ from audiolm_pytorch.audiolm_pytorch import (
 )
 
 from audiolm_pytorch.data import SoundDataset, get_dataloader
+from audiolm_pytorch.utils import AudioConditionerBase
 
 from accelerate import Accelerator
 
@@ -429,10 +427,11 @@ class SemanticTransformerTrainer(nn.Module):
     def __init__(
         self,
         wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]],
-        transformer: SemanticBase,
+        transformer: SemanticTransformer,
         *,
         num_train_steps,
         batch_size,
+        audio_conditioner: Optional[AudioConditionerBase] = None,
         dataset: Optional[Dataset] = None,
         data_max_length = None,
         folder = None,
@@ -452,10 +451,12 @@ class SemanticTransformerTrainer(nn.Module):
 
         self.wav2vec = wav2vec
         self.transformer = transformer
+        self.audio_conditioner = audio_conditioner
 
         self.train_wrapper = SemanticTransformerWrapper(
             wav2vec = wav2vec,
-            transformer = transformer
+            transformer = transformer,
+            audio_conditioner = audio_conditioner
         )
 
         self.register_buffer('steps', torch.Tensor([0]))
@@ -652,12 +653,13 @@ class SemanticTransformerTrainer(nn.Module):
 class CoarseTransformerTrainer(nn.Module):
     def __init__(
         self,
-        transformer: CoarseBase,
+        transformer: CoarseTransformer,
         soundstream: SoundStream,
         wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]],
         *,
         num_train_steps,
         batch_size,
+        audio_conditioner: Optional[AudioConditionerBase] = None,
         dataset: Optional[Dataset] = None,
         ds_fields: Tuple[str, ...] = ('raw_wave', 'raw_wave_for_soundstream', 'text'),
         data_max_length = None,
@@ -679,11 +681,13 @@ class CoarseTransformerTrainer(nn.Module):
         self.transformer = transformer
         self.soundstream = soundstream
         self.wav2vec = wav2vec
+        self.audio_conditioner = audio_conditioner
 
         self.train_wrapper = CoarseTransformerWrapper(
             soundstream = soundstream,
             wav2vec = wav2vec,
-            transformer = transformer
+            transformer = transformer,
+            audio_conditioner = audio_conditioner
         )
 
         self.register_buffer('steps', torch.Tensor([0]))
@@ -887,11 +891,12 @@ class CoarseTransformerTrainer(nn.Module):
 class FineTransformerTrainer(nn.Module):
     def __init__(
         self,
-        transformer: FineBase,
+        transformer: FineTransformer,
         soundstream: SoundStream,
         *,
         num_train_steps,
         batch_size,
+        audio_conditioner: Optional[AudioConditionerBase] = None,
         dataset: Optional[Dataset] = None,
         data_max_length = None,
         folder = None,
@@ -911,10 +916,12 @@ class FineTransformerTrainer(nn.Module):
 
         self.transformer = transformer
         self.soundstream = soundstream
+        self.audio_conditioner = audio_conditioner
 
         self.train_wrapper = FineTransformerWrapper(
             soundstream = soundstream,
-            transformer = transformer
+            transformer = transformer,
+            audio_conditioner = audio_conditioner
         )
 
         self.register_buffer('steps', torch.Tensor([0]))
