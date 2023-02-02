@@ -966,7 +966,7 @@ class SemanticTransformerWrapper(nn.Module):
 
         if exists(self.audio_conditioner) and exists(prime_wave):
             assert not exists(text) and not exists(text_embeds)
-            text_embeds = self.audio_conditioner(prime_wave)
+            text_embeds = self.audio_conditioner(wavs = prime_wave, namespace = 'semantic')
 
         # derive text embeddings if needed
 
@@ -1030,7 +1030,7 @@ class SemanticTransformerWrapper(nn.Module):
         if exists(self.audio_conditioner):
             assert exists(raw_wave)
             assert not exists(text) and not exists(text_embeds)
-            text_embeds = self.audio_conditioner(raw_wave)
+            text_embeds = self.audio_conditioner(wavs = raw_wave, namespace = 'semantic')
 
         if not exists(semantic_token_ids):
             assert exists(self.wav2vec), 'VQWav2Vec must be be provided if given raw wave for training'
@@ -1199,7 +1199,7 @@ class CoarseTransformerWrapper(nn.Module):
         if exists(self.audio_conditioner):
             assert exists(raw_wave)
             assert not exists(text) and not exists(text_embeds)
-            text_embeds = self.audio_conditioner(raw_wave) # technically audio embeds, but shared text-audio joint embedding space for mulan
+            text_embeds = self.audio_conditioner(wavs = raw_wave, namespace = 'coarse') # technically audio embeds, but shared text-audio joint embedding space for mulan
 
         if not exists(semantic_token_ids):
             assert exists(self.wav2vec), 'VQWav2Vec must be be provided if given raw wave for training'
@@ -1421,7 +1421,7 @@ class FineTransformerWrapper(nn.Module):
         if exists(self.audio_conditioner):
             assert exists(raw_wave)
             assert not exists(text) and not exists(text_embeds)
-            text_embeds = self.audio_conditioner(raw_wave) # technically audio embeds, but shared text-audio joint embedding space for mulan
+            text_embeds = self.audio_conditioner(wavs = raw_wave, namespace = 'fine') # technically audio embeds, but shared text-audio joint embedding space for mulan
 
         if exists(raw_wave):
             assert exists(self.soundstream), 'SoundStream must be provided if given raw wave for training'
@@ -1508,6 +1508,7 @@ class AudioLM(nn.Module):
         semantic_transformer: SemanticTransformer,
         coarse_transformer: CoarseTransformer,
         fine_transformer: FineTransformer,
+        audio_conditioner: Optional[AudioConditionerBase] = None,
         unique_consecutive = True
     ):
         super().__init__()
@@ -1524,6 +1525,7 @@ class AudioLM(nn.Module):
         self.semantic = SemanticTransformerWrapper(
             wav2vec = wav2vec,
             transformer = semantic_transformer,
+            audio_conditioner = audio_conditioner,
             unique_consecutive = unique_consecutive
         )
 
@@ -1531,12 +1533,14 @@ class AudioLM(nn.Module):
             wav2vec = wav2vec,
             soundstream = soundstream,
             transformer = coarse_transformer,
+            audio_conditioner = audio_conditioner,
             unique_consecutive = unique_consecutive
         )
 
         self.fine = FineTransformerWrapper(
             soundstream = soundstream,
-            transformer = fine_transformer
+            transformer = fine_transformer,
+            audio_conditioner = audio_conditioner
         )
 
     @property
