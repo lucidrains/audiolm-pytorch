@@ -1513,6 +1513,8 @@ class AudioLM(nn.Module):
     ):
         super().__init__()
 
+        self.audio_conditioner = audio_conditioner
+
         assert semantic_transformer.num_semantic_tokens == coarse_transformer.num_semantic_tokens
         assert coarse_transformer.codebook_size == fine_transformer.codebook_size
         assert coarse_transformer.num_coarse_quantizers == fine_transformer.num_coarse_quantizers
