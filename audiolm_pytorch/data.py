@@ -68,6 +68,10 @@ class SoundDataset(Dataset):
 
         assert data.numel() > 0, f'one of your audio file ({file}) is empty. please remove it from your folder'
 
+        if data.shape[0] > 1:
+            # the audio has more than 1 channel, convert to mono
+            data = torch.mean(data, dim=0).unsqueeze(0)
+
         num_outputs = len(self.target_sample_hz)
         data = cast_tuple(data, num_outputs)
 
