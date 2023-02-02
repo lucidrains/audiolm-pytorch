@@ -592,7 +592,7 @@ class CoarseTransformer(nn.Module):
         codebook_size_with_eos = codebook_size + 1
         self.coarse_embedding = nn.Embedding(num_coarse_quantizers * codebook_size_with_eos, dim)
 
-        text_dim = get_encoded_dim(t5_name)
+        text_dim = default(cond_dim, get_encoded_dim(t5_name))
         self.proj_text_embed = nn.Linear(text_dim, dim, bias = False) if text_dim != dim else nn.Identity()
 
         self.transformer = Transformer(
@@ -767,7 +767,7 @@ class FineTransformer(nn.Module):
 
         self.eos_id = codebook_size
 
-        text_dim = get_encoded_dim(t5_name)
+        text_dim = default(cond_dim, get_encoded_dim(t5_name))
         self.proj_text_embed = nn.Linear(text_dim, dim, bias = False) if text_dim != dim else nn.Identity()
 
         self.transformer = Transformer(
