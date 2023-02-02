@@ -424,10 +424,21 @@ class Transformer(nn.Module):
 
         return self.norm(x)
 
+# bases
+
+class SemanticBase(nn.Module):
+    pass
+
+class CoarseBase(nn.Module):
+    pass
+
+class FineBase(nn.Module):
+    pass
+
 # the three hierarchical transformers
 
 @beartype
-class SemanticTransformer(nn.Module):
+class SemanticTransformer(SemanticBase):
     def __init__(
         self,
         *,
@@ -542,7 +553,7 @@ class SemanticTransformer(nn.Module):
         return self.to_logits(tokens)
 
 @beartype
-class CoarseTransformer(nn.Module):
+class CoarseTransformer(CoarseBase):
     def __init__(
         self,
         *,
@@ -710,7 +721,7 @@ class CoarseTransformer(nn.Module):
 
         return semantic_logits, coarse_logits
 
-class FineTransformer(nn.Module):
+class FineTransformer(FineBase):
     def __init__(
         self,
         *,
