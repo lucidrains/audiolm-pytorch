@@ -374,6 +374,8 @@ class Transformer(nn.Module):
     ):
         super().__init__()
         assert not (cross_attend and cond_as_self_attn_prefix)
+        self.dim_context = default(dim_context, dim)
+
         self.cond_as_self_attn_prefix = cond_as_self_attn_prefix
 
         self.grad_shrink = partial(grad_shrink, alpha = grad_shrink_alpha)
@@ -399,6 +401,7 @@ class Transformer(nn.Module):
         context_mask = None
     ):
         assert not (self.cond_as_self_attn_prefix and not exists(context))
+        assert not (exists(context) and context.shape[-1] != self.dim_context), f'you had specified a conditioning dimension of {self.dim_context}, yet what was received by the transformer has dimension of {context.shape[-1]}'
 
         n, device = x.shape[1], x.device
 
