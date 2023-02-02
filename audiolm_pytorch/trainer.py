@@ -426,7 +426,7 @@ class SemanticTransformerTrainer(nn.Module):
     def __init__(
         self,
         wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]],
-        transformer: SemanticTransformer,
+        transformer,
         *,
         num_train_steps,
         batch_size,
@@ -649,7 +649,7 @@ class SemanticTransformerTrainer(nn.Module):
 class CoarseTransformerTrainer(nn.Module):
     def __init__(
         self,
-        transformer: CoarseTransformer,
+        transformer,
         soundstream: SoundStream,
         wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]],
         *,
@@ -884,7 +884,7 @@ class CoarseTransformerTrainer(nn.Module):
 class FineTransformerTrainer(nn.Module):
     def __init__(
         self,
-        transformer: FineTransformer,
+        transformer,
         soundstream: SoundStream,
         *,
         num_train_steps,
