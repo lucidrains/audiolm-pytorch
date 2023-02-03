@@ -1174,7 +1174,7 @@ class CoarseTransformerWrapper(nn.Module):
                 is_last_step = ind == (self.num_coarse_quantizers - 1)
 
                 _, coarse_logits = self.transformer.forward_with_cond_scale(
-                    coarse_token_ids=sampled_coarse_token_ids,
+                    coarse_token_ids = sampled_coarse_token_ids,
                     semantic_token_ids = semantic_token_ids,
                     text_embeds = text_embeds,
                     cond_scale = cond_scale,
