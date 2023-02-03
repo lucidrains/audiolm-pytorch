@@ -28,6 +28,8 @@ from audiolm_pytorch import SoundStream, SoundStreamTrainer
 soundstream = SoundStream(
     codebook_size = 1024,
     rq_num_quantizers = 8,
+    attn_window_size = 128,       # local attention receptive field at bottleneck
+    attn_depth = 2                # 2 local attention transformer blocks - the soundstream folks were not experts with attention, so i took the liberty to add some. encodec went with lstms, but attention should be better
 )
 
 trainer = SoundStreamTrainer(
