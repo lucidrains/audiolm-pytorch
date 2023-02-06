@@ -246,7 +246,7 @@ sample = trainer.generate(text = ['sound of rain drops on the rooftops'], batch_
 
 - <a href="https://stability.ai/">Stability.ai</a> for the generous sponsorship to work and open source cutting edge artificial intelligence research
 
-- <a href="https://huggingface.co/">🤗 Huggingface</a> for their amazing accelerate and transformers libraries
+- <a href="https://huggingface.co/">🤗 Hugging Face</a> for their amazing accelerate and transformers libraries
 
 - <a href="https://ai.facebook.com/">MetaAI</a> for <a href="https://github.com/facebookresearch/fairseq">Fairseq</a> and the liberal license
 
