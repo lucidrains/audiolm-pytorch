@@ -12,6 +12,22 @@ This repository now also contains a MIT licensed version of <a href="https://arx
 
 Update: AudioLM was essentially used to 'solve' music generation in the new <a href="https://github.com/lucidrains/audiolm-pytorch">MusicLM</a>
 
+## Appreciation
+
+- <a href="https://stability.ai/">Stability.ai</a> for the generous sponsorship to work and open source cutting edge artificial intelligence research
+
+- <a href="https://huggingface.co/">🤗 Huggingface</a> for their amazing accelerate and transformers libraries
+
+- <a href="https://ai.facebook.com/">MetaAI</a> for <a href="https://github.com/facebookresearch/fairseq">Fairseq</a> and the liberal license
+
+- <a href="https://github.com/eonglints">@eonglints</a> for offering his professional advice and expertise as well as pull requests!
+
+- <a href="https://github.com/djqualia">@djqualia</a>, <a href="https://github.com/yigityu">@yigityu</a>, <a href="https://github.com/inspirit">@inspirit</a>, and <a href="https://github.com/BlackFox1197">@BlackFox1197</a> for helping with the debugging of soundstream
+
+- <a href="https://github.com/zhvng">Allen</a> for catching and fixing some bugs!
+
+- <a href="https://github.com/AndreyBocharnikov">Andrey</a> for identifying a missing loss in soundstream and guiding me through the proper mel spectrogram hyperparameters
+
 ## Install
 
 ```bash
@@ -241,20 +257,6 @@ trainer.train()
 sample = trainer.generate(text = ['sound of rain drops on the rooftops'], batch_size = 1, max_length = 2) # (1, < 128) - may terminate early if it detects [eos]
 
 ```
-
-## Appreciation
-
-- <a href="https://stability.ai/">Stability.ai</a> for the generous sponsorship to work and open source cutting edge artificial intelligence research
-
-- <a href="https://huggingface.co/">🤗 Huggingface</a> for their amazing accelerate and transformers libraries
-
-- <a href="https://ai.facebook.com/">MetaAI</a> for <a href="https://github.com/facebookresearch/fairseq">Fairseq</a> and the liberal license
-
-- <a href="https://github.com/eonglints">@eonglints</a> for offering his professional advice and expertise as well as pull requests!
-
-- <a href="https://github.com/djqualia">@djqualia</a>, <a href="https://github.com/yigityu">@yigityu</a>, <a href="https://github.com/inspirit">@inspirit</a>, and <a href="https://github.com/BlackFox1197">@BlackFox1197</a> for helping with the debugging of soundstream
-
-- <a href="https://github.com/zhvng">Allen</a> for catching and fixing some bugs!
 
 ## Todo
 

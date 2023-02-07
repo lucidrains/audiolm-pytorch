@@ -43,6 +43,11 @@ def auto_handle_complex(fn):
 
     return inner
 
+# tensor helpers
+
+def l2norm(t, dim = -1):
+    return F.normalize(t, dim = dim)
+
 # gan losses
 
 def log(t, eps = 1e-20):
@@ -551,15 +556,13 @@ class SoundStream(nn.Module):
         self.mel_spec_transforms = nn.ModuleList([])
         self.mel_spec_recon_alphas = []
 
-        max_win_length = 2 ** max(multi_spectral_window_powers_of_two)
-
         for powers in multi_spectral_window_powers_of_two:
             win_length = 2 ** powers
             alpha = (win_length / 2) ** 0.5
 
             melspec_transform = T.MelSpectrogram(
                 sample_rate = target_sample_hz,
-                n_fft = max_win_length,
+                n_fft = win_length,
                 win_length = win_length,
                 hop_length = win_length // 4,
                 n_mels = num_mel_bins
@@ -708,8 +711,7 @@ class SoundStream(nn.Module):
         for mel_transform, alpha in zip(self.mel_spec_transforms, self.mel_spec_recon_alphas):
             orig_mel, recon_mel = map(mel_transform, (orig_x, recon_x))
             log_orig_mel, log_recon_mel = map(log, (orig_mel, recon_mel))
-
-            multi_spectral_recon_loss = multi_spectral_recon_loss + (orig_mel - recon_mel).abs().sum() + alpha * ((log_orig_mel - log_recon_mel) ** 2).sum()
+            multi_spectral_recon_loss = multi_spectral_recon_loss + (orig_mel - recon_mel).abs().sum() + alpha * l2norm(log_orig_mel - log_recon_mel, dim = -2).sum()
 
         # adversarial loss
 
