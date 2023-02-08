@@ -130,6 +130,27 @@ class ModReLU(nn.Module):
     def forward(self, x):
         return F.relu(torch.abs(x) + self.b) * torch.exp(1.j * torch.angle(x))
 
+class ComplexConv2d(nn.Module):
+    def __init__(
+        self,
+        dim,
+        dim_out,
+        kernel_size,
+        stride = 1,
+        padding = 0
+    ):
+        super().__init__()
+        conv = nn.Conv2d(dim, dim_out, kernel_size, dtype = torch.complex64)
+        self.weight = nn.Parameter(torch.view_as_real(conv.weight))
+        self.bias = nn.Parameter(torch.view_as_real(conv.bias))
+
+        self.stride = stride
+        self.padding = padding
+
+    def forward(self, x):
+        weight, bias = map(torch.view_as_complex, (self.weight, self.bias))
+        return F.conv2d(x, weight, bias, stride = self.stride, padding = self.padding)
+
 def ComplexSTFTResidualUnit(chan_in, chan_out, strides):
     kernel_sizes = tuple(map(lambda t: t + 2, strides))
     paddings = tuple(map(lambda t: t // 2, kernel_sizes))
@@ -214,22 +235,6 @@ class ComplexSTFTDiscriminator(nn.Module):
         return complex_logits_abs, intermediates
 
 # simulated complex stft discriminator
-
-class ComplexConv2d(nn.Module):
-    def __init__(
-        self,
-        *args,
-        **kwargs
-    ):
-        super().__init__()
-        self.conv_real = nn.Conv2d(*args, **kwargs)
-        self.conv_imag = nn.Conv2d(*args, **kwargs)
-
-    def forward(self, x):
-        real, imag = x.unbind(dim = 1)
-        new_real = self.conv_real(real) - self.conv_imag(imag)
-        new_imag = self.conv_real(imag) + self.conv_imag(real)
-        return torch.stack((new_real, new_imag), dim = 1)
 
 def complex_abs(t, dim = 1, eps = 1e-8):
     real, imag = t.unbind(dim = 1)
@@ -470,8 +475,7 @@ class SoundStream(nn.Module):
         attn_window_size = 128,
         attn_dim_head = 64,
         attn_heads = 8,
-        attn_depth = 1,
-        use_complex_stft_discriminator = True
+        attn_depth = 1
     ):
         super().__init__()
         self.target_sample_hz = target_sample_hz # for resampling on the fly
@@ -545,8 +549,7 @@ class SoundStream(nn.Module):
         self.discr_multi_scales = discr_multi_scales
         self.discriminators = nn.ModuleList([MultiScaleDiscriminator() for _ in range(len(discr_multi_scales))])
 
-        stft_discr_klass = ComplexSTFTDiscriminator if use_complex_stft_discriminator else STFTDiscriminator
-        self.stft_discriminator = stft_discr_klass()
+        self.stft_discriminator = ComplexSTFTDiscriminator()
 
         # multi spectral reconstruction
 
