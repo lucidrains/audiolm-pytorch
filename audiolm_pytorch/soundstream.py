@@ -201,10 +201,12 @@ class ComplexSTFTDiscriminator(nn.Module):
 
         complex_logits = self.final_conv(x)
 
-        if not return_intermediates:
-            return complex_logits
+        complex_logits_abs = torch.abs(complex_logits)
 
-        return torch.abs(complex_logits), intermediates
+        if not return_intermediates:
+            return complex_logits_abs
+
+        return complex_logits_abs, intermediates
 
 # simulated complex stft discriminator
 
