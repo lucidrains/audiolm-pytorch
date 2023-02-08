@@ -36,7 +36,7 @@ def cast_tuple(t, l = 1):
 # tensor helpers
 
 def l2norm(t, dim = -1):
-    return F.normalize(t, dim = dim)
+    return torch.linalg.vector_norm(t, ord = 2, dim = dim)
 
 # gan losses
 
