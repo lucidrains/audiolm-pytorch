@@ -33,11 +33,6 @@ def default(val, d):
 def cast_tuple(t, l = 1):
     return ((t,) * l) if not isinstance(t, tuple) else t
 
-# tensor helpers
-
-def l2norm(t, dim = -1):
-    return F.normalize(t, dim = dim)
-
 # gan losses
 
 def log(t, eps = 1e-20):
@@ -617,7 +612,7 @@ class SoundStream(nn.Module):
                 log_orig_mel, log_recon_mel = map(log, (orig_mel, recon_mel))
 
                 l1_mel_loss = (orig_mel - recon_mel).abs().sum(dim = -2).mean()
-                l2_log_mel_loss = alpha * l2norm(log_orig_mel - log_recon_mel, dim = -2).mean()
+                l2_log_mel_loss = alpha * (log_orig_mel - log_recon_mel).norm(p = 2, dim = -2).mean()
 
                 multi_spectral_recon_loss = multi_spectral_recon_loss + l1_mel_loss + l2_log_mel_loss
 
