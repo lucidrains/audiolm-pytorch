@@ -20,7 +20,7 @@ Update: AudioLM was essentially used to 'solve' music generation in the new <a h
 
 - <a href="https://ai.facebook.com/">MetaAI</a> for <a href="https://github.com/facebookresearch/fairseq">Fairseq</a> and the liberal license
 
-- <a href="https://github.com/eonglints">@eonglints</a> for offering his professional advice and expertise as well as pull requests!
+- <a href="https://github.com/eonglints">@eonglints</a> and <a href="https://github.com/turian">Joseph</a> for offering their professional advice and expertise as well as pull requests!
 
 - <a href="https://github.com/djqualia">@djqualia</a>, <a href="https://github.com/yigityu">@yigityu</a>, <a href="https://github.com/inspirit">@inspirit</a>, and <a href="https://github.com/BlackFox1197">@BlackFox1197</a> for helping with the debugging of soundstream
 
