@@ -167,7 +167,8 @@ class ComplexSTFTDiscriminator(nn.Module):
         input_channels = 1,
         n_fft = 1024,
         hop_length = 256,
-        win_length = 1024
+        win_length = 1024,
+        normalized = False
     ):
         super().__init__()
         self.init_conv = ComplexConv2d(input_channels, channels, 7, padding = 3)
@@ -186,6 +187,8 @@ class ComplexSTFTDiscriminator(nn.Module):
         self.final_conv = ComplexConv2d(layer_channels[-1], 1, (16, 1)) # todo: remove hardcoded 16
 
         # stft settings
+
+        self.normalized = normalized
 
         self.n_fft = n_fft
         self.hop_length = hop_length
@@ -207,6 +210,7 @@ class ComplexSTFTDiscriminator(nn.Module):
             self.n_fft,
             hop_length = self.hop_length,
             win_length = self.win_length,
+            normalized = self.normalized,
             return_complex = True
         )
 
@@ -348,11 +352,13 @@ class SoundStream(nn.Module):
         rq_ema_decay = 0.95,
         input_channels = 1,
         discr_multi_scales = (1, 0.5, 0.25),
+        stft_normalized = False,
         enc_cycle_dilations = (1, 3, 9),
         dec_cycle_dilations = (1, 3, 9),
         multi_spectral_window_powers_of_two = tuple(range(6, 12)),
         multi_spectral_n_ffts = 512,
         multi_spectral_n_mels = 64,
+        multi_spectral_normalized = False,
         recon_loss_weight = 1.,
         multi_spectral_recon_loss_weight = 1.,
         adversarial_loss_weight = 1.,
@@ -440,7 +446,9 @@ class SoundStream(nn.Module):
         self.discr_multi_scales = discr_multi_scales
         self.discriminators = nn.ModuleList([MultiScaleDiscriminator() for _ in range(len(discr_multi_scales))])
 
-        self.stft_discriminator = ComplexSTFTDiscriminator()
+        self.stft_discriminator = ComplexSTFTDiscriminator(
+            normalized = stft_normalized
+        )
 
         # multi spectral reconstruction
 
@@ -465,6 +473,7 @@ class SoundStream(nn.Module):
                 win_length = win_length,
                 hop_length = win_length // 4,
                 n_mels = n_mels,
+                normalized = multi_spectral_normalized
             )
 
             self.mel_spec_transforms.append(melspec_transform)

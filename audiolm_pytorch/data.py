@@ -37,6 +37,7 @@ class SoundDataset(Dataset):
         self,
         folder,
         exts = ['flac', 'wav'],
+        normalize = False,
         max_length: OptionalIntOrTupleInt = None,
         target_sample_hz: OptionalIntOrTupleInt = None,
         seq_len_multiple_of: OptionalIntOrTupleInt = None
@@ -49,6 +50,7 @@ class SoundDataset(Dataset):
         assert len(files) > 0, 'no sound files found'
 
         self.files = files
+        self.normalize = normalize
 
         self.target_sample_hz = cast_tuple(target_sample_hz)
         num_outputs = len(self.target_sample_hz)
@@ -64,7 +66,7 @@ class SoundDataset(Dataset):
     def __getitem__(self, idx):
         file = self.files[idx]
 
-        data, sample_hz = torchaudio.load(file)
+        data, sample_hz = torchaudio.load(file, normalize = self.normalize)
 
         assert data.numel() > 0, f'one of your audio file ({file}) is empty. please remove it from your folder'
 
