@@ -699,10 +699,11 @@ class SoundStream(nn.Module):
 
         multi_spectral_recon_loss = 0
 
-        for mel_transform, alpha in zip(self.mel_spec_transforms, self.mel_spec_recon_alphas):
-            orig_mel, recon_mel = map(mel_transform, (orig_x, recon_x))
-            log_orig_mel, log_recon_mel = map(log, (orig_mel, recon_mel))
-            multi_spectral_recon_loss = multi_spectral_recon_loss + (orig_mel - recon_mel).abs().sum() + alpha * l2norm(log_orig_mel - log_recon_mel, dim = -2).sum()
+        if self.multi_spectral_recon_loss_weight > 0:
+            for mel_transform, alpha in zip(self.mel_spec_transforms, self.mel_spec_recon_alphas):
+                orig_mel, recon_mel = map(mel_transform, (orig_x, recon_x))
+                log_orig_mel, log_recon_mel = map(log, (orig_mel, recon_mel))
+                multi_spectral_recon_loss = multi_spectral_recon_loss + (orig_mel - recon_mel).abs().sum() + alpha * l2norm(log_orig_mel - log_recon_mel, dim = -2).sum()
 
         # adversarial loss
 
