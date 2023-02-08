@@ -117,7 +117,6 @@ class SoundStreamTrainer(nn.Module):
         batch_size,
         data_max_length = None,
         folder,
-        dataset_normalize = False,
         lr = 2e-4,
         grad_accum_every = 4,
         wd = 0.,
@@ -168,8 +167,7 @@ class SoundStreamTrainer(nn.Module):
             folder,
             max_length = data_max_length,
             target_sample_hz = soundstream.target_sample_hz,
-            seq_len_multiple_of = soundstream.seq_len_multiple_of,
-            normalize = dataset_normalize
+            seq_len_multiple_of = soundstream.seq_len_multiple_of
         )
 
         # split for validation
@@ -437,7 +435,6 @@ class SemanticTransformerTrainer(nn.Module):
         audio_conditioner: Optional[AudioConditionerBase] = None,
         dataset: Optional[Dataset] = None,
         data_max_length = None,
-        dataset_normalize = False,
         folder = None,
         lr = 3e-4,
         grad_accum_every = 1,
@@ -487,8 +484,7 @@ class SemanticTransformerTrainer(nn.Module):
                 folder,
                 max_length = data_max_length,
                 target_sample_hz = wav2vec.target_sample_hz,
-                seq_len_multiple_of = wav2vec.seq_len_multiple_of,
-                normalize = dataset_normalize
+                seq_len_multiple_of = wav2vec.seq_len_multiple_of
             )
 
         self.ds_fields = None
@@ -668,7 +664,6 @@ class CoarseTransformerTrainer(nn.Module):
         dataset: Optional[Dataset] = None,
         ds_fields: Tuple[str, ...] = ('raw_wave', 'raw_wave_for_soundstream', 'text'),
         data_max_length = None,
-        dataset_normalize = False,
         folder = None,
         lr = 3e-4,
         grad_accum_every = 1,
@@ -724,8 +719,7 @@ class CoarseTransformerTrainer(nn.Module):
                     wav2vec.target_sample_hz,
                     soundstream.target_sample_hz
                 ), # need 2 waves resampled differently here
-                seq_len_multiple_of = soundstream.seq_len_multiple_of,
-                normalize = dataset_normalize
+                seq_len_multiple_of = soundstream.seq_len_multiple_of
             )
 
         self.ds_fields = ds_fields
