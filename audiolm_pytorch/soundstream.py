@@ -748,6 +748,6 @@ class SoundStream(nn.Module):
         total_loss = recon_loss * self.recon_loss_weight + multi_spectral_recon_loss * self.multi_spectral_recon_loss_weight + adversarial_loss * self.adversarial_loss_weight + feature_loss * self.feature_loss_weight + all_commitment_loss
 
         if return_loss_breakdown:
-            return total_loss, (recon_loss, adversarial_loss, feature_loss, all_commitment_loss)
+            return total_loss, (recon_loss, multi_spectral_recon_loss, adversarial_loss, feature_loss, all_commitment_loss)
 
         return total_loss

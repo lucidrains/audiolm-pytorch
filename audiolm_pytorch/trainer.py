@@ -308,13 +308,14 @@ class SoundStreamTrainer(nn.Module):
             wave, = next(self.dl_iter)
             wave = wave.to(device)
 
-            loss, (recon_loss, *_) = self.soundstream(wave, return_loss_breakdown = True)
+            loss, (recon_loss, multi_spectral_recon_loss, *_) = self.soundstream(wave, return_loss_breakdown = True)
 
             self.accelerator.backward(loss / self.grad_accum_every)
 
             accum_log(logs, dict(
                 loss = loss.item() / self.grad_accum_every,
-                recon_loss = recon_loss.item() / self.grad_accum_every
+                recon_loss = recon_loss.item() / self.grad_accum_every,
+                multi_spectral_recon_loss = multi_spectral_recon_loss.item() / self.grad_accum_every
             ))
 
         if exists(self.max_grad_norm):
