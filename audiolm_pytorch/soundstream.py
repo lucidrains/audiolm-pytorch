@@ -450,7 +450,7 @@ class SoundStream(nn.Module):
         enc_cycle_dilations = (1, 3, 9),
         dec_cycle_dilations = (1, 3, 9),
         multi_spectral_window_powers_of_two = tuple(range(6, 12)),
-        num_mel_bins = 64,
+        multi_spectral_n_mels = (8, 16, 32, 64, 64, 64, 64),
         recon_loss_weight = 1.,
         multi_spectral_recon_loss_weight = 1.,
         adversarial_loss_weight = 1.,
@@ -547,7 +547,7 @@ class SoundStream(nn.Module):
         self.mel_spec_transforms = nn.ModuleList([])
         self.mel_spec_recon_alphas = []
 
-        for powers in multi_spectral_window_powers_of_two:
+        for powers, n_mels in zip(multi_spectral_window_powers_of_two, multi_spectral_n_mels):
             win_length = 2 ** powers
             alpha = (win_length / 2) ** 0.5
 
@@ -556,7 +556,7 @@ class SoundStream(nn.Module):
                 n_fft = win_length,
                 win_length = win_length,
                 hop_length = win_length // 4,
-                n_mels = num_mel_bins
+                n_mels = n_mels,
             )
 
             self.mel_spec_transforms.append(melspec_transform)
