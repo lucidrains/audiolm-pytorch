@@ -145,6 +145,7 @@ class ComplexConv2d(nn.Module):
 
     def forward(self, x):
         weight, bias = map(torch.view_as_complex, (self.weight, self.bias))
+        print(x.dtype, weight.dtype, x.device, weight.device)
         return F.conv2d(x, weight, bias, stride = self.stride, padding = self.padding)
 
 def ComplexSTFTResidualUnit(chan_in, chan_out, strides):

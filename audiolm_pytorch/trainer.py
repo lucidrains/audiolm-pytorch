@@ -951,8 +951,7 @@ class FineTransformerTrainer(nn.Module):
                 folder,
                 max_length = data_max_length,
                 target_sample_hz = soundstream.target_sample_hz,
-                seq_len_multiple_of = soundstream.seq_len_multiple_of,
-                normalize = dataset_normalize
+                seq_len_multiple_of = soundstream.seq_len_multiple_of
             )
 
         self.ds_fields = None
