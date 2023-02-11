@@ -12,6 +12,8 @@ This repository now also contains a MIT licensed version of <a href="https://arx
 
 Update: AudioLM was essentially used to 'solve' music generation in the new <a href="https://github.com/lucidrains/musiclm-pytorch">MusicLM</a>
 
+In the future, <a href="https://www.youtube.com/watch?v=olNvmUCmY8o">this movie clip</a> would no longer make any sense. You would just prompt an AI instead.
+
 ## Appreciation
 
 - <a href="https://stability.ai/">Stability.ai</a> for the generous sponsorship to work and open source cutting edge artificial intelligence research
