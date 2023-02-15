@@ -402,13 +402,8 @@ class SoundStreamTrainer(nn.Module):
         # save model every so often
 
         if self.is_main and not (steps % self.save_model_every):
-            state_dict = self.soundstream.state_dict()
             model_path = str(self.results_folder / f'soundstream.{steps}.pt')
-            torch.save(state_dict, model_path)
-
-            ema_state_dict = self.ema_soundstream.state_dict()
-            model_path = str(self.results_folder / f'soundstream.{steps}.ema.pt')
-            torch.save(ema_state_dict, model_path)
+            self.save(model_path)
 
             self.print(f'{steps}: saving model to {str(self.results_folder)}')
 
@@ -634,9 +629,8 @@ class SemanticTransformerTrainer(nn.Module):
         # save model every so often
 
         if self.is_main and not (steps % self.save_model_every):
-            state_dict = self.transformer.state_dict()
             model_path = str(self.results_folder / f'semantic.transformer.{steps}.pt')
-            torch.save(state_dict, model_path)
+            self.save(model_path)
 
             self.print(f'{steps}: saving model to {str(self.results_folder)}')
 
@@ -873,9 +867,8 @@ class CoarseTransformerTrainer(nn.Module):
         # save model every so often
 
         if self.is_main and not (steps % self.save_model_every):
-            state_dict = self.transformer.state_dict()
             model_path = str(self.results_folder / f'fine.transformer.{steps}.pt')
-            torch.save(state_dict, model_path)
+            self.save(model_path)
 
             self.print(f'{steps}: saving model to {str(self.results_folder)}')
 
@@ -1105,9 +1098,8 @@ class FineTransformerTrainer(nn.Module):
         # save model every so often
 
         if self.is_main and not (steps % self.save_model_every):
-            state_dict = self.transformer.state_dict()
             model_path = str(self.results_folder / f'fine.transformer.{steps}.pt')
-            torch.save(state_dict, model_path)
+            self.save(model_path)
 
             self.print(f'{steps}: saving model to {str(self.results_folder)}')
 
