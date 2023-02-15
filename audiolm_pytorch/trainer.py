@@ -133,6 +133,7 @@ class SoundStreamTrainer(nn.Module):
         apply_grad_penalty_every = 4,
         dl_num_workers = 0,
         accelerate_kwargs: dict = dict(),
+        use_lion = False,
         force_clear_prev_results = None  # set to True | False to skip the prompt
     ):
         super().__init__()
@@ -155,7 +156,7 @@ class SoundStreamTrainer(nn.Module):
             one_multiscale_discr_optimizer = get_optimizer(discr.parameters(), lr = lr, wd = wd)
             setattr(self, discr_optimizer_key, one_multiscale_discr_optimizer)
 
-        self.discr_optim = get_optimizer(soundstream.stft_discriminator.parameters(), lr = lr, wd = wd)
+        self.discr_optim = get_optimizer(soundstream.stft_discriminator.parameters(), lr = lr, wd = wd, use_lion = use_lion)
 
         # max grad norm
 
