@@ -585,7 +585,8 @@ class SoundStream(nn.Module):
                 one_discr_loss = hinge_discr_loss(fake_logits, real_logits)
 
                 discr_losses.append(one_discr_loss)
-                discr_grad_penalties.append(gradient_penalty(scaled_real, one_discr_loss))
+                if apply_grad_penalty:
+                    discr_grad_penalties.append(gradient_penalty(scaled_real, one_discr_loss))
 
             if not return_discr_losses_separately:
                 all_discr_losses = torch.stack(discr_losses).mean()

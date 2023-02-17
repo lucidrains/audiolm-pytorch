@@ -299,7 +299,7 @@ class SoundStreamTrainer(nn.Module):
         device = self.device
 
         steps = int(self.steps.item())
-        apply_grad_penalty = not (steps % self.apply_grad_penalty_every)
+        apply_grad_penalty = self.apply_grad_penalty_every > 0 and not (steps % self.apply_grad_penalty_every)
         log_losses = self.log_losses_every > 0 and not (steps % self.log_losses_every)
 
         self.soundstream.train()
