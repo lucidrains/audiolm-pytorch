@@ -460,7 +460,6 @@ class SemanticTransformer(nn.Module):
         cond_as_self_attn_prefix = False,
         cond_drop_prob = 0.5,
         grad_shrink_alpha = 0.1,
-        pad_id = -1,
         **kwargs
     ):
         super().__init__()
@@ -478,7 +477,6 @@ class SemanticTransformer(nn.Module):
 
         self.semantic_embedding = nn.Embedding(num_semantic_tokens + 1, dim)
         self.eos_id = num_semantic_tokens
-        self.pad_id = pad_id
 
         text_dim = default(cond_dim, get_encoded_dim(t5_name))
         self.proj_text_embed = nn.Linear(text_dim, dim, bias = False) if text_dim != dim else nn.Identity()
