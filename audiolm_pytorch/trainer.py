@@ -262,7 +262,7 @@ class SoundStreamTrainer(nn.Module):
     def load(self, path):
         path = Path(path)
         assert path.exists()
-        pkg = torch.load(str(path))
+        pkg = torch.load(str(path), map_location = 'cpu')
 
         self.unwrapped_soundstream.load_state_dict(pkg['model'])
 
@@ -585,7 +585,7 @@ class SemanticTransformerTrainer(nn.Module):
     def load(self, path):
         path = Path(path)
         assert path.exists()
-        pkg = torch.load(str(path))
+        pkg = torch.load(str(path), map_location = 'cpu')
 
         transformer = self.accelerator.unwrap_model(self.transformer)
         transformer.load_state_dict(pkg['model'])
@@ -822,7 +822,7 @@ class CoarseTransformerTrainer(nn.Module):
     def load(self, path):
         path = Path(path)
         assert path.exists()
-        pkg = torch.load(str(path))
+        pkg = torch.load(str(path), map_location = 'cpu')
 
         transformer = self.accelerator.unwrap_model(self.transformer)
         transformer.load_state_dict(pkg['model'])
@@ -1054,7 +1054,7 @@ class FineTransformerTrainer(nn.Module):
     def load(self, path):
         path = Path(path)
         assert path.exists()
-        pkg = torch.load(str(path))
+        pkg = torch.load(str(path), map_location = 'cpu')
 
         transformer = self.accelerator.unwrap_model(self.transformer)
         transformer.load_state_dict(pkg['model'])
