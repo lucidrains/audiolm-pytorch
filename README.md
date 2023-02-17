@@ -260,6 +260,22 @@ sample = trainer.generate(text = ['sound of rain drops on the rooftops'], batch_
 
 ```
 
+## Multi-GPU
+
+Because all the trainer classes uses <a href="https://huggingface.co/docs/accelerate/accelerator">🤗 Accelerator</a>, you can easily do multi gpu training by using the `accelerate` command as so
+
+At the project root
+
+```python
+$ accelerate config
+```
+
+Then, in the same directory
+
+```python
+$ accelerate launch train.py
+```
+
 ## Todo
 
 - [x] complete CoarseTransformer
