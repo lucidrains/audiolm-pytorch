@@ -264,6 +264,17 @@ class SoundStreamTrainer(nn.Module):
         assert path.exists()
         pkg = torch.load(str(path), map_location = 'cpu')
 
+        # if loading from old version, make a hacky guess
+
+        if len(pkg.keys()) > 20:
+            self.unwrapped_soundstream.load_state_dict(pkg)
+
+            if self.use_ema:
+                self.ema_soundstream.ema_model.load_state_dict(pkg)
+            return
+
+        # otherwise load things normally
+
         self.unwrapped_soundstream.load_state_dict(pkg['model'])
 
         if self.use_ema:

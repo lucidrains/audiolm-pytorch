@@ -495,6 +495,10 @@ class SoundStream(nn.Module):
         x = rearrange(x, 'b n c -> b c n')
         return self.decoder(x)
 
+    def save(self, path):
+        path = Path(path)
+        torch.save(self.state_dict(), str(path))
+
     def load(self, path):
         path = Path(path)
         assert path.exists()
