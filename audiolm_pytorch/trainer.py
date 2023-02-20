@@ -117,6 +117,7 @@ class SoundStreamTrainer(nn.Module):
         num_train_steps,
         batch_size,
         data_max_length = None,
+        data_max_length_seconds = None,
         folder,
         lr = 2e-4,
         grad_accum_every = 4,
@@ -172,6 +173,11 @@ class SoundStreamTrainer(nn.Module):
         self.discr_max_grad_norm = discr_max_grad_norm
 
         # create dataset
+
+        assert not (exists(data_max_length) and exists(data_max_length_seconds))
+
+        if exists(data_max_length_seconds):
+            data_max_length = data_max_length_seconds * soundstream.target_sample_hz
 
         self.ds = SoundDataset(
             folder,
@@ -482,6 +488,7 @@ class SemanticTransformerTrainer(nn.Module):
         audio_conditioner: Optional[AudioConditionerBase] = None,
         dataset: Optional[Dataset] = None,
         data_max_length = None,
+        data_max_length_seconds = None,
         folder = None,
         lr = 3e-4,
         grad_accum_every = 1,
@@ -527,6 +534,11 @@ class SemanticTransformerTrainer(nn.Module):
         self.ds = dataset
         if not exists(self.ds):
             assert exists(folder), 'folder must be passed in, if not passing in a custom dataset for text conditioned audio synthesis training'
+
+            assert not (exists(data_max_length) and exists(data_max_length_seconds))
+
+            if exists(data_max_length_seconds):
+                data_max_length = data_max_length_seconds * wav2vec.target_sample_hz
 
             self.ds = SoundDataset(
                 folder,
@@ -711,6 +723,7 @@ class CoarseTransformerTrainer(nn.Module):
         dataset: Optional[Dataset] = None,
         ds_fields: Tuple[str, ...] = ('raw_wave', 'raw_wave_for_soundstream', 'text'),
         data_max_length = None,
+        data_max_length_seconds = None,
         folder = None,
         lr = 3e-4,
         grad_accum_every = 1,
@@ -759,6 +772,11 @@ class CoarseTransformerTrainer(nn.Module):
 
         if not exists(self.ds):
             assert exists(folder), 'folder must be passed in, if not passing in a custom dataset for text conditioned audio synthesis training'
+
+            assert not (exists(data_max_length) and exists(data_max_length_seconds))
+
+            if exists(data_max_length_seconds):
+                data_max_length = tuple(data_max_length_seconds * hz for hz in (wav2vec.target_sample_hz, soundstream.target_sample_hz))
 
             self.ds = SoundDataset(
                 folder,
@@ -947,6 +965,7 @@ class FineTransformerTrainer(nn.Module):
         audio_conditioner: Optional[AudioConditionerBase] = None,
         dataset: Optional[Dataset] = None,
         data_max_length = None,
+        data_max_length_seconds = None,
         dataset_normalize = False,
         folder = None,
         lr = 3e-4,
@@ -994,6 +1013,11 @@ class FineTransformerTrainer(nn.Module):
 
         if not exists(self.ds):
             assert exists(folder), 'folder must be passed in, if not passing in a custom dataset for text conditioned audio synthesis training'
+
+            assert not (exists(data_max_length) and exists(data_max_length_seconds))
+
+            if exists(data_max_length_seconds):
+                data_max_length = data_max_length_seconds * soundstream.target_sample_hz
 
             self.ds = SoundDataset(
                 folder,
