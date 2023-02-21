@@ -245,6 +245,11 @@ class SoundStreamTrainer(nn.Module):
         hps = {"num_train_steps": num_train_steps, "data_max_length": data_max_length, "learning_rate": lr}
         self.accelerator.init_trackers("soundstream", config=hps)        
 
+    def set_model_as_ema_model_(self):
+        """ this will force the main 'online' model to have same parameters as the exponentially moving averaged model """
+        assert self.use_ema
+        self.ema_soundstream.ema_model.load_state_dict(self.soundstream.state_dict())
+
     def save(self, path):
         pkg = dict(
             model = self.accelerator.get_state_dict(self.soundstream),

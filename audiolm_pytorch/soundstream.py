@@ -502,14 +502,23 @@ class SoundStream(nn.Module):
     def load(self, path):
         path = Path(path)
         assert path.exists()
-        self.load_state_dict(torch.load(str(path)))
+        pkg = torch.load(str(path))
 
-    def load_from_trainer_saved_obj(self, path, ema = False):
-        key = 'ema_model' if ema else 'model'
+        # some hacky logic to remove confusion around loading trainer vs main model
+
+        maybe_trainer_pkg = len(pkg.keys()) < 15
+        if maybe_trainer_pkg:
+            self.load_from_trainer_saved_obj(str(path))
+            return
+
+        self.load_state_dict()
+
+    def load_from_trainer_saved_obj(self, path):
         path = Path(path)
         assert path.exists()
-        trainer_obj = torch.load(str(path))
-        self.load_state_dict(trainer_obj[key])
+        obj = torch.load(str(path))
+        self.load_state_dict(obj['model'])
+        exit()
 
     def non_discr_parameters(self):
         return [
