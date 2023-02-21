@@ -13,7 +13,7 @@ from torch.linalg import vector_norm
 
 import torchaudio.transforms as T
 
-from einops import rearrange, reduce
+from einops import rearrange, reduce, pack, unpack
 
 from vector_quantize_pytorch import ResidualVQ
 
@@ -518,7 +518,6 @@ class SoundStream(nn.Module):
         assert path.exists()
         obj = torch.load(str(path))
         self.load_state_dict(obj['model'])
-        exit()
 
     def non_discr_parameters(self):
         return [
@@ -543,6 +542,8 @@ class SoundStream(nn.Module):
         input_sample_hz = None,
         apply_grad_penalty = False
     ):
+        x, ps = pack([x], '* n')
+
         if exists(input_sample_hz):
             x = resample(x, input_sample_hz, self.target_sample_hz)
 
@@ -573,6 +574,7 @@ class SoundStream(nn.Module):
         recon_x = self.decoder(x)
 
         if return_recons_only:
+            recon_x, = unpack(recon_x, ps, '* c n')
             return recon_x
 
         # multi-scale discriminator loss

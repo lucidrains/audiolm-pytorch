@@ -62,6 +62,11 @@ trainer = SoundStreamTrainer(
 ).cuda()
 
 trainer.train()
+
+# after a lot of training, you can test the autoencoding as so
+
+audio = torch.randn(10080).cuda()
+recons = soundstream(audio, return_recons_only = True) # (1, 10080) - 1 channel
 ```
 
 Then three separate transformers (`SemanticTransformer`, `CoarseTransformer`, `FineTransformer`) need to be trained
