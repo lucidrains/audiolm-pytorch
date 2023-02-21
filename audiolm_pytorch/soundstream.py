@@ -343,7 +343,7 @@ class SoundStream(nn.Module):
         self,
         *,
         channels = 32,
-        strides = (2, 4, 5, 8),
+        strides = (3, 4, 5, 8),
         channel_mults = (2, 4, 8, 16),
         codebook_dim = 512,
         codebook_size = 1024,
