@@ -491,7 +491,7 @@ class SoundStream(nn.Module):
         codes = self.rq.get_codes_from_indices(quantized_indices)
         x = reduce(codes, 'q ... -> ...', 'sum')
 
-        x = self.decoder_attn(x) + x
+        x = self.decoder_attn(x)
         x = rearrange(x, 'b n c -> b c n')
         return self.decoder(x)
 
