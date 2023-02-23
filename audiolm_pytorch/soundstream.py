@@ -501,7 +501,12 @@ class SoundStream(nn.Module):
 
     def save(self, path):
         path = Path(path)
-        torch.save(self.state_dict(), str(path))
+        pkg = dict(
+            model = self.state_dict(),
+            version = __version__
+        )
+
+        torch.save(pkg, str(path))
 
     def load(self, path):
         path = Path(path)
