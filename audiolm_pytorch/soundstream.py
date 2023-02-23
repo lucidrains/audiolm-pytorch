@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from torch.linalg import vector_norm
 
 import torchaudio.transforms as T
+from torchaudio.functional import resample
 
 from einops import rearrange, reduce, pack, unpack
 
