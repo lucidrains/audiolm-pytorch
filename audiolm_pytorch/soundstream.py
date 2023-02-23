@@ -708,3 +708,33 @@ class SoundStream(nn.Module):
             return total_loss, (recon_loss, multi_spectral_recon_loss, adversarial_loss, feature_loss, all_commitment_loss)
 
         return total_loss
+
+# some default soundstreams
+
+class AudioLMSoundStream(SoundStream):
+    def __init__(
+        self,
+        strides = (2, 4, 5, 8),
+        target_sample_hz = 16000,
+        rq_num_quantizers = 8,
+        **kwargs
+    ):
+        super().__init__(
+            strides = strides,
+            target_sample_hz = target_sample_hz,
+            **kwargs
+        )
+
+class MusicLMSoundStream(SoundStream):
+    def __init__(
+        self,
+        strides = (3, 4, 5, 8),
+        target_sample_hz = 24000,
+        rq_num_quantizers = 12,
+        **kwargs
+    ):
+        super().__init__(
+            strides = strides,
+            target_sample_hz = target_sample_hz,
+            **kwargs
+        )
