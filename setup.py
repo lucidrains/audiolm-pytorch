@@ -1,9 +1,10 @@
 from setuptools import setup, find_packages
+exec(open('audiolm_pytorch/version.py').read())
 
 setup(
   name = 'audiolm-pytorch',
   packages = find_packages(exclude=[]),
-  version = '0.15.3',
+  version = __version__,
   license='MIT',
   description = 'AudioLM - Language Modeling Approach to Audio Generation from Google Research - Pytorch',
   author = 'Phil Wang',

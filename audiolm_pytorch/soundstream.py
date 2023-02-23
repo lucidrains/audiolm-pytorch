@@ -23,6 +23,10 @@ from local_attention.transformer import FeedForward
 from mega_pytorch import MultiHeadedEMA
 from audiolm_pytorch.utils import curtail_to_multiple
 
+from audiolm_pytorch.version import __version__
+from packaging import version
+parsed_version = version.parse(__version__)
+
 # helper functions
 
 def exists(val):
@@ -503,6 +507,11 @@ class SoundStream(nn.Module):
         path = Path(path)
         assert path.exists()
         pkg = torch.load(str(path))
+
+        # check version
+
+        if 'version' in pkg and version.parse(pkg['version']) < parsed_version:
+            print(f'soundstream model being loaded was trained on an older version of audiolm-pytorch ({pkg["version"]})')
 
         # some hacky logic to remove confusion around loading trainer vs main model
 
