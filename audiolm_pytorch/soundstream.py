@@ -348,7 +348,7 @@ class SoundStream(nn.Module):
         self,
         *,
         channels = 32,
-        strides = (3, 4, 5, 8),
+        strides = (2, 4, 5, 8),
         channel_mults = (2, 4, 8, 16),
         codebook_dim = 512,
         codebook_size = 1024,
@@ -368,7 +368,7 @@ class SoundStream(nn.Module):
         adversarial_loss_weight = 1.,
         feature_loss_weight = 100,
         quantize_dropout_cutoff_index = 1,
-        target_sample_hz = 24000,
+        target_sample_hz = 16000,
         use_local_attn = True,
         use_mhesa = True,
         mhesa_heads = 4,
@@ -716,7 +716,7 @@ class AudioLMSoundStream(SoundStream):
         self,
         strides = (2, 4, 5, 8),
         target_sample_hz = 16000,
-        rq_num_quantizers = 8,
+        rq_num_quantizers = 12,
         **kwargs
     ):
         super().__init__(
