@@ -38,6 +38,9 @@ from audiolm_pytorch.audiolm_pytorch import (
 from audiolm_pytorch.data import SoundDataset, get_dataloader
 from audiolm_pytorch.utils import AudioConditionerBase
 
+from audiolm_pytorch.version import __version__
+from packaging import version
+
 from accelerate import Accelerator
 from accelerate.utils import DistributedDataParallelKwargs
 
@@ -254,7 +257,8 @@ class SoundStreamTrainer(nn.Module):
         pkg = dict(
             model = self.accelerator.get_state_dict(self.soundstream),
             optim = self.optim.state_dict(),
-            discr_optim = self.discr_optim.state_dict()
+            discr_optim = self.discr_optim.state_dict(),
+            version = __version__
         )
 
         if self.use_ema:
@@ -283,6 +287,11 @@ class SoundStreamTrainer(nn.Module):
             if self.use_ema:
                 self.ema_soundstream.ema_model.load_state_dict(pkg)
             return
+
+        # check version
+
+        if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
+            print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
 
         # otherwise load things normally
 
@@ -606,7 +615,8 @@ class SemanticTransformerTrainer(nn.Module):
     def save(self, path):
         pkg = dict(
             model = self.accelerator.get_state_dict(self.transformer),
-            optim = self.optim.state_dict()
+            optim = self.optim.state_dict(),
+            version = __version__
         )
         torch.save(pkg, path)
 
@@ -614,6 +624,11 @@ class SemanticTransformerTrainer(nn.Module):
         path = Path(path)
         assert path.exists()
         pkg = torch.load(str(path), map_location = 'cpu')
+
+        # check version
+
+        if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
+            print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
 
         transformer = self.accelerator.unwrap_model(self.transformer)
         transformer.load_state_dict(pkg['model'])
@@ -849,7 +864,8 @@ class CoarseTransformerTrainer(nn.Module):
     def save(self, path):
         pkg = dict(
             model = self.accelerator.get_state_dict(self.transformer),
-            optim = self.optim.state_dict()
+            optim = self.optim.state_dict(),
+            version = __version__
         )
         torch.save(pkg, path)
 
@@ -857,6 +873,11 @@ class CoarseTransformerTrainer(nn.Module):
         path = Path(path)
         assert path.exists()
         pkg = torch.load(str(path), map_location = 'cpu')
+
+        # check version
+
+        if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
+            print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
 
         transformer = self.accelerator.unwrap_model(self.transformer)
         transformer.load_state_dict(pkg['model'])
@@ -1087,7 +1108,8 @@ class FineTransformerTrainer(nn.Module):
     def save(self, path):
         pkg = dict(
             model = self.accelerator.get_state_dict(self.transformer),
-            optim = self.optim.state_dict()
+            optim = self.optim.state_dict(),
+            version = __version__
         )
         torch.save(pkg, path)
 
@@ -1095,6 +1117,11 @@ class FineTransformerTrainer(nn.Module):
         path = Path(path)
         assert path.exists()
         pkg = torch.load(str(path), map_location = 'cpu')
+
+        # check version
+
+        if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
+            print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
 
         transformer = self.accelerator.unwrap_model(self.transformer)
         transformer.load_state_dict(pkg['model'])
