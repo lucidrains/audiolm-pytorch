@@ -40,6 +40,8 @@ $ pip install audiolm-pytorch
 
 ## Usage
 
+### SoundStream
+
 First, `SoundStream` needs to be trained on a large corpus of audio data
 
 ```python
@@ -78,6 +80,16 @@ soundstream = AudioLMSoundStream(...) # say you want the hyperparameters as in A
 
 # rest is the same as above
 ```
+
+As of version `0.17.0`, you can now invoke the class method on `SoundStream` to load from checkpoint files, without having to remember your configurations.
+
+```python
+from audiolm_pytorch import SoundStream
+
+soundstream = SoundStream.init_and_load_from('./path/to/checkpoint.pt')
+```
+
+### Hierarchical Transformers
 
 Then three separate transformers (`SemanticTransformer`, `CoarseTransformer`, `FineTransformer`) need to be trained
 

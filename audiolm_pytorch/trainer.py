@@ -257,6 +257,7 @@ class SoundStreamTrainer(nn.Module):
         pkg = dict(
             model = self.accelerator.get_state_dict(self.soundstream),
             optim = self.optim.state_dict(),
+            config = self.soundstream._configs,
             discr_optim = self.discr_optim.state_dict(),
             version = __version__
         )

@@ -28,6 +28,8 @@ from audiolm_pytorch.version import __version__
 from packaging import version
 parsed_version = version.parse(__version__)
 
+import pickle
+
 # helper functions
 
 def exists(val):
@@ -385,6 +387,16 @@ class SoundStream(nn.Module):
         attn_depth = 1
     ):
         super().__init__()
+
+        # for autosaving the config
+
+        _locals = locals()
+        _locals.pop('self', None)
+        _locals.pop('__class__', None)
+        self._configs = pickle.dumps(_locals)
+
+        # rest of the class
+
         self.target_sample_hz = target_sample_hz # for resampling on the fly
 
         self.single_channel = input_channels == 1
@@ -510,15 +522,29 @@ class SoundStream(nn.Module):
         path = Path(path)
         pkg = dict(
             model = self.state_dict(),
+            config = self._configs,
             version = __version__
         )
 
         torch.save(pkg, str(path))
 
+    @classmethod
+    def init_and_load_from(cls, path, strict = True):
+        path = Path(path)
+        assert path.exists()
+        pkg = torch.load(str(path), map_location = 'cpu')
+
+        assert 'config' in pkg, 'model configs were not found in this saved checkpoint'
+
+        config = pickle.loads(pkg['config'])
+        soundstream = cls(**config)
+        soundstream.load(path, strict = strict)
+        return soundstream
+
     def load(self, path, strict = True):
         path = Path(path)
         assert path.exists()
-        pkg = torch.load(str(path))
+        pkg = torch.load(str(path), map_location = 'cpu')
 
         # check version
 
@@ -724,32 +750,28 @@ class SoundStream(nn.Module):
 
 # some default soundstreams
 
-class AudioLMSoundStream(SoundStream):
-    def __init__(
-        self,
-        strides = (2, 4, 5, 8),
-        target_sample_hz = 16000,
-        rq_num_quantizers = 12,
+def AudioLMSoundStream(
+    strides = (2, 4, 5, 8),
+    target_sample_hz = 16000,
+    rq_num_quantizers = 12,
+    **kwargs
+):
+    return SoundStream(
+        strides = strides,
+        target_sample_hz = target_sample_hz,
+        rq_num_quantizers = rq_num_quantizers,
         **kwargs
-    ):
-        super().__init__(
-            strides = strides,
-            target_sample_hz = target_sample_hz,
-            rq_num_quantizers = rq_num_quantizers,
-            **kwargs
-        )
+    )
 
-class MusicLMSoundStream(SoundStream):
-    def __init__(
-        self,
-        strides = (3, 4, 5, 8),
-        target_sample_hz = 24000,
-        rq_num_quantizers = 12,
+def MusicLMSoundStream(
+    strides = (3, 4, 5, 8),
+    target_sample_hz = 24000,
+    rq_num_quantizers = 12,
+    **kwargs
+):
+    return SoundStream(
+        strides = strides,
+        target_sample_hz = target_sample_hz,
+        rq_num_quantizers = rq_num_quantizers,
         **kwargs
-    ):
-        super().__init__(
-            strides = strides,
-            target_sample_hz = target_sample_hz,
-            rq_num_quantizers = rq_num_quantizers,
-            **kwargs
-        )
+    )
