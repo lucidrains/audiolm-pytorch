@@ -69,6 +69,16 @@ audio = torch.randn(10080).cuda()
 recons = soundstream(audio, return_recons_only = True) # (1, 10080) - 1 channel
 ```
 
+You can also use soundstreams that are specific to `AudioLM` and `MusicLM` by importing `AudioLMSoundStream` and `MusicLMSoundStream` respectively
+
+```python
+from audiolm_pytorch import AudioLMSoundStream, MusicLMSoundStream
+
+soundstream = AudioLMSoundStream(...) # say you want the hyperparameters as in Audio LM paper
+
+# rest is the same as above
+```
+
 Then three separate transformers (`SemanticTransformer`, `CoarseTransformer`, `FineTransformer`) need to be trained
 
 
