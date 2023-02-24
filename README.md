@@ -131,19 +131,14 @@ ex. `CoarseTransformer`
 
 ```python
 import torch
-from audiolm_pytorch import HubertWithKmeans, SoundStream, CoarseTransformer, CoarseTransformerWrapper, CoarseTransformerTrainer
+from audiolm_pytorch import HubertWithKmeans, SoundStream, CoarseTransformer, CoarseTransformerTrainer
 
 wav2vec = HubertWithKmeans(
     checkpoint_path = './hubert/hubert_base_ls960.pt',
     kmeans_path = './hubert/hubert_base_ls960_L9_km500.bin'
 )
 
-soundstream = SoundStream(
-    codebook_size = 1024,
-    rq_num_quantizers = 8,
-)
-
-soundstream.load('/path/to/trained/soundstream.pt')
+soundstream = SoundStream.init_and_load_from('/path/to/trained/soundstream.pt')
 
 coarse_transformer = CoarseTransformer(
     num_semantic_tokens = wav2vec.codebook_size,
@@ -170,14 +165,9 @@ ex. `FineTransformer`
 
 ```python
 import torch
-from audiolm_pytorch import SoundStream, FineTransformer, FineTransformerWrapper, FineTransformerTrainer
+from audiolm_pytorch import SoundStream, FineTransformer, FineTransformerTrainer
 
-soundstream = SoundStream(
-    codebook_size = 1024,
-    rq_num_quantizers = 8,
-)
-
-soundstream.load('/path/to/trained/soundstream.pt')
+soundstream = SoundStream.init_and_load_from('/path/to/trained/soundstream.pt')
 
 fine_transformer = FineTransformer(
     num_coarse_quantizers = 3,
