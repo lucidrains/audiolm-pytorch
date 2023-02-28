@@ -27,7 +27,6 @@ setup(
     'joblib',
     'lion-pytorch',
     'local-attention>=1.6.0',
-    'Mega-pytorch',
     'scikit-learn',
     'sentencepiece',
     'torch>=1.12',
