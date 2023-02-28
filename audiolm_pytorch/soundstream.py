@@ -510,6 +510,10 @@ class SoundStream(nn.Module):
         self.adversarial_loss_weight = adversarial_loss_weight
         self.feature_loss_weight = feature_loss_weight
 
+    @property
+    def configs(self):
+        return pickle.loads(self._configs)
+
     def decode_from_codebook_indices(self, quantized_indices):
         codes = self.rq.get_codes_from_indices(quantized_indices)
         x = reduce(codes, 'q ... -> ...', 'sum')
