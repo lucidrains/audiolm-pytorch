@@ -342,7 +342,7 @@ class LocalTransformerBlock(nn.Module):
         **kwargs
     ):
         super().__init__()
-        self.attn = LocalMHA(dim = dim, qk_rmsnorm = True, **kwargs)
+        self.attn = LocalMHA(dim = dim, qk_rmsnorm = True, use_xpos = True, **kwargs)
         self.ff = FeedForward(dim = dim)
 
     def forward(self, x):
