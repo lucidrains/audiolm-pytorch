@@ -1343,6 +1343,10 @@ class FineTransformerWrapper(nn.Module):
 
         self.num_fine_quantizers = transformer.num_fine_quantizers
         self.num_coarse_quantizers = transformer.num_coarse_quantizers
+
+        if exists(soundstream):
+            assert (self.num_fine_quantizers + self.num_coarse_quantizers) == soundstream.num_quantizers, 'number of fine and coarse quantizers on fine transformer must add up to total number of quantizers on soundstream'
+
         self.eos_id = transformer.eos_id
 
         assert self.num_coarse_quantizers > 0
@@ -1563,6 +1567,7 @@ class AudioLM(nn.Module):
         assert semantic_transformer.num_semantic_tokens == coarse_transformer.num_semantic_tokens
         assert coarse_transformer.codebook_size == fine_transformer.codebook_size
         assert coarse_transformer.num_coarse_quantizers == fine_transformer.num_coarse_quantizers
+        assert (fine_transformer.num_coarse_quantizers + fine_transformer.num_fine_quantizers) == soundstream.num_quantizers
 
         self.semantic_has_condition = semantic_transformer.has_condition
         self.coarse_has_condition = coarse_transformer.has_condition

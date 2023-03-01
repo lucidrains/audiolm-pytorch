@@ -424,6 +424,8 @@ class SoundStream(nn.Module):
 
         self.encoder_attn = nn.Sequential(*[LocalTransformerBlock(**attn_kwargs) for _ in range(attn_depth)]) if use_local_attn else None
 
+        self.num_quantizers = rq_num_quantizers
+
         self.rq = ResidualVQ(
             dim = codebook_dim,
             num_quantizers = rq_num_quantizers,
