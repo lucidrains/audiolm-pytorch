@@ -26,7 +26,7 @@ setup(
     'fairseq',
     'joblib',
     'lion-pytorch',
-    'local-attention>=1.7.1',
+    'local-attention>=1.7.2',
     'scikit-learn',
     'sentencepiece',
     'torch>=1.12',
