@@ -360,7 +360,8 @@ class SoundStream(nn.Module):
         attn_window_size = 128,
         attn_dim_head = 64,
         attn_heads = 8,
-        attn_depth = 1
+        attn_depth = 1,
+        attn_xpos_scale_base = None
     ):
         super().__init__()
 
@@ -398,6 +399,7 @@ class SoundStream(nn.Module):
             dim_head = attn_dim_head,
             heads = attn_heads,
             window_size = attn_window_size,
+            xpos_scale_base = attn_xpos_scale_base,
             prenorm = True,
             causal = True
         )
