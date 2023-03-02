@@ -454,3 +454,13 @@ $ accelerate launch train.py
     status = {to be published - one attention stabilization technique is circulating within Google Brain, being used by multiple teams}
 }
 ```
+
+```bibtex
+@article{Defossez2022HighFN,
+    title   = {High Fidelity Neural Audio Compression},
+    author  = {Alexandre D'efossez and Jade Copet and Gabriel Synnaeve and Yossi Adi},
+    journal = {ArXiv},
+    year    = {2022},
+    volume  = {abs/2210.13438}
+}
+```
