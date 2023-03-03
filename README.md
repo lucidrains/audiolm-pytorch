@@ -464,3 +464,13 @@ $ accelerate launch train.py
     volume  = {abs/2210.13438}
 }
 ```
+
+```bibtex
+@article{Hu2017SqueezeandExcitationN,
+    title   = {Squeeze-and-Excitation Networks},
+    author  = {Jie Hu and Li Shen and Gang Sun},
+    journal = {2018 IEEE/CVF Conference on Computer Vision and Pattern Recognition},
+    year    = {2017},
+    pages   = {7132-7141}
+}
+```

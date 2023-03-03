@@ -130,6 +130,7 @@ class MultiScaleDiscriminator(nn.Module):
         return out, intermediates
 
 # autoregressive squeeze excitation
+# https://arxiv.org/abs/1709.01507
 
 class SqueezeExcite(nn.Module):
     def __init__(self, dim, reduction_factor = 4, dim_minimum = 8):
