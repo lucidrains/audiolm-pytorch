@@ -32,6 +32,8 @@ In the future, <a href="https://www.youtube.com/watch?v=olNvmUCmY8o">this movie 
 
 - <a href="https://github.com/AndreyBocharnikov">Andrey</a> for identifying a missing loss in soundstream and guiding me through the proper mel spectrogram hyperparameters
 
+- <a href="https://github.com/alexdemartos">Alejandro</a> and <a href="https://github.com/ilya16">Ilya</a> for sharing their results with training soundstream, and for working through a few issues with the local attention positional embeddings
+
 ## Install
 
 ```bash
