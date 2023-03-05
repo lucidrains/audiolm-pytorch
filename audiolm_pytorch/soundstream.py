@@ -545,6 +545,8 @@ class SoundStream(nn.Module):
         self.adversarial_loss_weight = adversarial_loss_weight
         self.feature_loss_weight = feature_loss_weight
 
+        self.register_buffer('zero', torch.tensor([0.]), persistent = False)
+
     @property
     def configs(self):
         return pickle.loads(self._configs)
@@ -725,7 +727,7 @@ class SoundStream(nn.Module):
 
         # multispectral recon loss - eq (4) and (5) in https://arxiv.org/abs/2107.03312
 
-        multi_spectral_recon_loss = 0
+        multi_spectral_recon_loss = self.zero
 
         if self.multi_spectral_recon_loss_weight > 0:
             for mel_transform, alpha in zip(self.mel_spec_transforms, self.mel_spec_recon_alphas):
