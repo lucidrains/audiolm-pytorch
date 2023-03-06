@@ -26,7 +26,7 @@ In the future, <a href="https://www.youtube.com/watch?v=olNvmUCmY8o">this movie 
 
 - <a href="https://github.com/djqualia">@djqualia</a>, <a href="https://github.com/yigityu">@yigityu</a>, <a href="https://github.com/inspirit">@inspirit</a>, and <a href="https://github.com/BlackFox1197">@BlackFox1197</a> for helping with the debugging of soundstream
 
-- <a href="https://github.com/zhvng">Allen</a> for catching and fixing some bugs!
+- <a href="https://github.com/zhvng">Allen</a> and <a href="https://github.com/LWprogramming">LWprogramming</a> for reviewing the code and submitting bug fixes!
 
 - <a href="https://github.com/ilya16">Ilya</a> for finding an issue with multi-scale discriminator downsampling and for soundstream trainer improvements
 
