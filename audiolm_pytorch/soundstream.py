@@ -191,6 +191,8 @@ class ComplexConv2d(nn.Module):
 
     def forward(self, x):
         weight, bias = map(torch.view_as_complex, (self.weight, self.bias))
+
+        x = x.to(weight.dtype)
         return F.conv2d(x, weight, bias, stride = self.stride, padding = self.padding)
 
 def ComplexSTFTResidualUnit(chan_in, chan_out, strides):
@@ -269,6 +271,7 @@ class ComplexSTFTDiscriminator(nn.Module):
         intermediates = []
 
         x = self.init_conv(x)
+
         intermediates.append(x)
 
         for layer in self.layers:
