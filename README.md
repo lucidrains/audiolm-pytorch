@@ -62,7 +62,7 @@ trainer = SoundStreamTrainer(
     batch_size = 4,
     grad_accum_every = 8,         # effective batch size of 32
     data_max_length_seconds = 2,  # train on 2 second audio
-    num_train_steps = 10000
+    num_train_steps = 1_000_000
 ).cuda()
 
 trainer.train()
@@ -157,7 +157,7 @@ trainer = CoarseTransformerTrainer(
     folder = '/path/to/audio/files',
     batch_size = 1,
     data_max_length = 320 * 32,
-    num_train_steps = 10000
+    num_train_steps = 1_000_000
 )
 
 trainer.train()
@@ -185,7 +185,7 @@ trainer = FineTransformerTrainer(
     folder = '/path/to/audio/files',
     batch_size = 1,
     data_max_length = 320 * 32,
-    num_train_steps = 10000
+    num_train_steps = 1_000_000
 )
 
 trainer.train()
@@ -270,7 +270,7 @@ trainer = SemanticTransformerTrainer(
     batch_size = 4,
     grad_accum_every = 8,
     data_max_length = 320 * 32,
-    num_train_steps = 100000
+    num_train_steps = 1_000_000
 )
 
 trainer.train()
