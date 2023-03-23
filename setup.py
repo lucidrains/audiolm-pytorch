@@ -22,7 +22,7 @@ setup(
     'accelerate',
     'beartype',
     'einops>=0.6',
-    'ema-pytorch',
+    'ema-pytorch>=0.2.2',
     'fairseq',
     'joblib',
     'lion-pytorch',
