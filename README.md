@@ -42,9 +42,16 @@ $ pip install audiolm-pytorch
 
 ## Usage
 
-### SoundStream
+### SoundStream & Encodec
 
-First, `SoundStream` needs to be trained on a large corpus of audio data
+There are two options for the neural codec. If you want to use the pretrained 24kHz Encodec, just create an Encodec object as follows:
+```python
+from audiolm_pytorch import EncodecWrapper
+encodec = EncodecWrapper()
+# Now you can use the encodec variable in the same way you'd use the soundstream variables below.
+```
+
+Otherwise, to stay more true to the original paper, you can use `SoundStream`. First, `SoundStream` needs to be trained on a large corpus of audio data
 
 ```python
 from audiolm_pytorch import SoundStream, SoundStreamTrainer
@@ -152,7 +159,7 @@ coarse_transformer = CoarseTransformer(
 
 trainer = CoarseTransformerTrainer(
     transformer = coarse_transformer,
-    soundstream = soundstream,
+    codec = soundstream,
     wav2vec = wav2vec,
     folder = '/path/to/audio/files',
     batch_size = 1,
@@ -181,7 +188,7 @@ fine_transformer = FineTransformer(
 
 trainer = FineTransformerTrainer(
     transformer = fine_transformer,
-    soundstream = soundstream,
+    codec = soundstream,
     folder = '/path/to/audio/files',
     batch_size = 1,
     data_max_length = 320 * 32,
@@ -198,7 +205,7 @@ from audiolm_pytorch import AudioLM
 
 audiolm = AudioLM(
     wav2vec = wav2vec,
-    soundstream = soundstream,
+    codec = soundstream,
     semantic_transformer = semantic_transformer,
     coarse_transformer = coarse_transformer,
     fine_transformer = fine_transformer
