@@ -20,7 +20,7 @@ from audiolm_pytorch.t5 import t5_encode_text, get_encoded_dim, DEFAULT_T5_NAME
 
 from torchaudio.functional import resample
 
-from audiolm_pytorch.soundstream import SoundStream
+from audiolm_pytorch.soundstream import SoundStream, EncodecWrapper
 from audiolm_pytorch.utils import AudioConditionerBase
 
 from tqdm import tqdm
@@ -1268,7 +1268,7 @@ class CoarseTransformerWrapper(nn.Module):
         self,
         *,
         transformer: CoarseTransformer,
-        soundstream: Optional[SoundStream]  = None,
+        codec: Optional[SoundStream, EncodecWrapper]  = None,
         wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
         audio_conditioner: Optional[AudioConditionerBase] = None,
         pad_id = -1,
@@ -1277,7 +1277,7 @@ class CoarseTransformerWrapper(nn.Module):
         mask_prob = 0.15
     ):
         super().__init__()
-        self.soundstream = soundstream
+        self.codec = codec
         self.wav2vec = wav2vec
 
         self.transformer = transformer
@@ -1369,9 +1369,9 @@ class CoarseTransformerWrapper(nn.Module):
         if not reconstruct_wave:
             return sampled_coarse_token_ids
 
-        assert exists(self.soundstream)
+        assert exists(self.codec)
 
-        wav = self.soundstream.decode_from_codebook_indices(sampled_coarse_token_ids)
+        wav = self.codec.decode_from_codebook_indices(sampled_coarse_token_ids)
         return rearrange(wav, 'b 1 n -> b n')
 
     def forward(
@@ -1379,7 +1379,7 @@ class CoarseTransformerWrapper(nn.Module):
         *,
         semantic_token_ids = None,
         raw_wave = None,
-        raw_wave_for_soundstream = None,
+        raw_wave_for_codec = None,
         text = None,
         text_embeds = None,
         coarse_token_ids = None,
@@ -1388,10 +1388,10 @@ class CoarseTransformerWrapper(nn.Module):
     ):
         assert exists(raw_wave) or exists(semantic_token_ids), 'either raw waveform (raw_wave) is given or semantic token ids are given (semantic_token_ids)'
 
-        raw_wave_for_soundstream = default(raw_wave_for_soundstream, raw_wave)
-        assert exists(raw_wave_for_soundstream) or exists(coarse_token_ids), 'either raw waveform (raw_wav) is given, or coarse and fine token ids (coarse_token_ids, fine_token_ids)'
+        raw_wave_for_codec = default(raw_wave_for_codec, raw_wave)
+        assert exists(raw_wave_for_codec) or exists(coarse_token_ids), 'either raw waveform (raw_wav) is given, or coarse and fine token ids (coarse_token_ids, fine_token_ids)'
 
-        assert not all(map(exists, (raw_wave, raw_wave_for_soundstream, semantic_token_ids, coarse_token_ids)))
+        assert not all(map(exists, (raw_wave, raw_wave_for_codec, semantic_token_ids, coarse_token_ids)))
 
         if exists(self.audio_conditioner):
             assert exists(raw_wave)
@@ -1403,11 +1403,11 @@ class CoarseTransformerWrapper(nn.Module):
             semantic_token_ids = self.wav2vec(raw_wave, flatten = False)
 
         if not exists(coarse_token_ids):
-            assert exists(self.soundstream), 'SoundStream must be provided if given raw wave for training'
+            assert exists(self.codec), 'SoundStream must be provided if given raw wave for training'
 
             with torch.no_grad():
-                self.soundstream.eval()
-                _, indices, _ = self.soundstream(raw_wave_for_soundstream, return_encoded = True)
+                self.codec.eval()
+                _, indices, _ = self.codec(raw_wave_for_codec, return_encoded = True)
                 coarse_token_ids, _ = indices[..., :self.num_coarse_quantizers], indices[..., self.num_coarse_quantizers:]
 
         semantic_token_ids = rearrange(semantic_token_ids, 'b ... -> b (...)')
@@ -1484,14 +1484,14 @@ class FineTransformerWrapper(nn.Module):
         self,
         *,
         transformer: FineTransformer,
-        soundstream: Optional[SoundStream] = None,
+        codec: Optional[SoundStream, EncodecWrapper] = None,
         audio_conditioner: Optional[AudioConditionerBase] = None,
         coarse_cross_entropy_loss_weight = 1.,
         pad_id = -1,
         mask_prob = 0.15
     ):
         super().__init__()
-        self.soundstream = soundstream
+        self.codec = codec
 
         self.transformer = transformer
         self.audio_conditioner = audio_conditioner
@@ -1501,8 +1501,8 @@ class FineTransformerWrapper(nn.Module):
         self.num_fine_quantizers = transformer.num_fine_quantizers
         self.num_coarse_quantizers = transformer.num_coarse_quantizers
 
-        if exists(soundstream):
-            assert (self.num_fine_quantizers + self.num_coarse_quantizers) == soundstream.num_quantizers, 'number of fine and coarse quantizers on fine transformer must add up to total number of quantizers on soundstream'
+        if exists(codec):
+            assert (self.num_fine_quantizers + self.num_coarse_quantizers) == codec.num_quantizers, 'number of fine and coarse quantizers on fine transformer must add up to total number of quantizers on codec'
 
         self.eos_id = transformer.eos_id
 
@@ -1596,13 +1596,13 @@ class FineTransformerWrapper(nn.Module):
         if not reconstruct_wave:
             return sampled_fine_token_ids
 
-        # reconstruct the wave using soundstream, concatting the fine and coarse token ids together first across quantization dimension
+        # reconstruct the wave using codec, concatting the fine and coarse token ids together first across quantization dimension
 
-        assert exists(self.soundstream)
+        assert exists(self.codec)
 
         coarse_and_fine_ids = torch.cat((coarse_token_ids, sampled_fine_token_ids), dim = -1)
 
-        wav = self.soundstream.decode_from_codebook_indices(coarse_and_fine_ids)
+        wav = self.codec.decode_from_codebook_indices(coarse_and_fine_ids)
         return rearrange(wav, 'b 1 n -> b n')
 
     def forward(
@@ -1625,11 +1625,11 @@ class FineTransformerWrapper(nn.Module):
             text_embeds = self.audio_conditioner(wavs = raw_wave, namespace = 'fine') # technically audio embeds, but shared text-audio joint embedding space for mulan
 
         if exists(raw_wave):
-            assert exists(self.soundstream), 'SoundStream must be provided if given raw wave for training'
+            assert exists(self.codec), 'SoundStream must be provided if given raw wave for training'
 
             with torch.no_grad():
-                self.soundstream.eval()
-                _, token_ids, _ = self.soundstream(raw_wave, return_encoded = True)
+                self.codec.eval()
+                _, token_ids, _ = self.codec(raw_wave, return_encoded = True)
 
         if exists(token_ids):
             coarse_token_ids, fine_token_ids = token_ids[..., :self.num_coarse_quantizers], token_ids[..., self.num_coarse_quantizers:]
@@ -1706,7 +1706,7 @@ class AudioLM(nn.Module):
         self,
         *,
         wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]], 
-        soundstream: SoundStream,
+        codec: Union[SoundStream, EncodecWrapper],
         semantic_transformer: SemanticTransformer,
         coarse_transformer: CoarseTransformer,
         fine_transformer: FineTransformer,
@@ -1720,7 +1720,7 @@ class AudioLM(nn.Module):
         assert semantic_transformer.num_semantic_tokens == coarse_transformer.num_semantic_tokens
         assert coarse_transformer.codebook_size == fine_transformer.codebook_size
         assert coarse_transformer.num_coarse_quantizers == fine_transformer.num_coarse_quantizers
-        assert (fine_transformer.num_coarse_quantizers + fine_transformer.num_fine_quantizers) == soundstream.num_quantizers
+        assert (fine_transformer.num_coarse_quantizers + fine_transformer.num_fine_quantizers) == codec.num_quantizers
 
         self.semantic_has_condition = semantic_transformer.has_condition
         self.coarse_has_condition = coarse_transformer.has_condition
@@ -1736,14 +1736,14 @@ class AudioLM(nn.Module):
 
         self.coarse = CoarseTransformerWrapper(
             wav2vec = wav2vec,
-            soundstream = soundstream,
+            codec= codec,
             transformer = coarse_transformer,
             audio_conditioner = audio_conditioner,
             unique_consecutive = unique_consecutive
         )
 
         self.fine = FineTransformerWrapper(
-            soundstream = soundstream,
+            codec= codec,
             transformer = fine_transformer,
             audio_conditioner = audio_conditioner
         )
