@@ -8,7 +8,7 @@ It also extends the work for conditioning with classifier free guidance with T5.
 
 Please join <a href="https://discord.gg/xBPBXfcFHd"><img alt="Join us on Discord" src="https://img.shields.io/discord/823813159592001537?color=5865F2&logo=discord&logoColor=white"></a> if you are interested in replicating this work in the open
 
-This repository now also contains a MIT licensed version of <a href="https://arxiv.org/abs/2107.03312">SoundStream</a>. Once <a href="https://github.com/facebookresearch/encodec">EnCodec</a> becomes MIT licensed, then I will consider adding a wrapper for that as well for use here.
+This repository now also contains a MIT licensed version of <a href="https://arxiv.org/abs/2107.03312">SoundStream</a>. It is also compatible with <a href="https://github.com/facebookresearch/encodec">EnCodec</a>, however, be aware that it has a more restrictive non-commercial license, if you choose to use it.
 
 Update: AudioLM was essentially used to 'solve' music generation in the new <a href="https://github.com/lucidrains/musiclm-pytorch">MusicLM</a>
 
