@@ -1404,7 +1404,7 @@ class CoarseTransformerWrapper(nn.Module):
             semantic_token_ids = self.wav2vec(raw_wave, flatten = False)
 
         if not exists(coarse_token_ids):
-            assert exists(self.codec), 'SoundStream must be provided if given raw wave for training'
+            assert exists(self.codec), 'Codec must be provided if given raw wave for training'
 
             with torch.no_grad():
                 self.codec.eval()
@@ -1626,7 +1626,7 @@ class FineTransformerWrapper(nn.Module):
             text_embeds = self.audio_conditioner(wavs = raw_wave, namespace = 'fine') # technically audio embeds, but shared text-audio joint embedding space for mulan
 
         if exists(raw_wave):
-            assert exists(self.codec), 'SoundStream must be provided if given raw wave for training'
+            assert exists(self.codec), 'Codec must be provided if given raw wave for training'
 
             with torch.no_grad():
                 self.codec.eval()
