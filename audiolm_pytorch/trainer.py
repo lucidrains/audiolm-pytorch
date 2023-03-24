@@ -22,7 +22,8 @@ from audiolm_pytorch.optimizer import get_optimizer
 
 from ema_pytorch import EMA
 
-from audiolm_pytorch.soundstream import SoundStream, EncodecWrapper
+from audiolm_pytorch.soundstream import SoundStream
+from audiolm_pytorch.encodec import EncodecWrapper
 
 from audiolm_pytorch.audiolm_pytorch import (
     SemanticTransformer,
