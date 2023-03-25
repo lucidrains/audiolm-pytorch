@@ -1,4 +1,5 @@
 from functools import reduce
+import torch
 from torch import nn
 from encodec import EncodecModel
 from encodec.utils import convert_audio, _linear_overlap_add
