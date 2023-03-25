@@ -1,4 +1,5 @@
 from functools import reduce
+from einops import rearrange
 import torch
 from torch import nn
 from encodec import EncodecModel
