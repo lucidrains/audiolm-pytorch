@@ -154,6 +154,7 @@ def get_embeds(
     mask_pad_pos_to = 0
 ):
     pad_mask = codes == pad_id
+    # pad_mask = pad_mask.cuda()
     codes_without_pad = codes.masked_fill(pad_mask, 0) # just retrieve first code as dummy
     embeds = embeddings(codes_without_pad)
 
@@ -310,6 +311,7 @@ class Attention(nn.Module):
             if not exists(mask):
                 mask = torch.ones((b, n), device = device, dtype = torch.bool)
 
+            mask = mask.cuda()
             if exists(prefix_context_mask):
                 mask = torch.cat((prefix_context_mask, mask), dim = -1)
             else:
@@ -561,7 +563,7 @@ class SemanticTransformer(nn.Module):
 
         if return_loss:
             labels, ids = ids.clone(), ids[:, :-1]
-
+        ids = ids.cuda()
         tokens = get_embeds(self.semantic_embedding, ids)
 
         start_tokens = repeat(self.start_token, 'd -> b 1 d', b = ids.shape[0])

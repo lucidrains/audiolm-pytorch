@@ -17,6 +17,9 @@ from audiolm_pytorch.utils import curtail_to_multiple
 
 from einops import rearrange
 
+import webdataset as wds
+import json
+
 # helper functions
 
 def exists(val):
@@ -30,6 +33,100 @@ def cast_tuple(val, length = 1):
 OptionalIntOrTupleInt = Optional[Union[int, Tuple[Optional[int], ...]]]
 
 # dataset functions
+
+def preprocess(sample:tuple, target_sample_hz:int=16000, max_length:int=320 * 32, seq_len_multiple_of=None):
+    '''
+    Resamples audio to target_sr and selects random seq_len seconds segment from audio
+    if audio is shorter than seq_len, repeats audio k times (k=seq_len/audio_len, where audio_len lenght of audio)
+    Converts all audio samples to mono format
+    Converts captions from JSON to string:
+        if there's audio meta tags like title, artist, genre constructs caption playing {genre} song "{title}" by {artist}
+        uses raw cpation otherwise
+    '''
+    audio, json_data = sample
+    label = f'{json_data["caption"]}'
+   
+    audio_meta = json_data.get('audio_meta', None)
+    
+    if audio_meta is not None:
+        tags = audio_meta.get('tags', None)
+        if tags is not None:
+            try:
+                title, artist, genre = '', '', ''
+                for k in tags.keys():
+                    if k in ['title', 'TITLE']:
+                        title = f'titled {tags[k]}'
+                    if k in ['artist', 'ARTIST']:
+                        artist = f'by {tags[k]}'
+                    if k in ['genre', 'GENRE']:
+                        genre = tags[k]
+
+                label = f'playing {genre} song "{title}" {artist}'
+            except:
+                pass
+    data, sample_hz = audio
+    num_outputs = len(cast_tuple(target_sample_hz))
+    max_length = cast_tuple(max_length, num_outputs)
+    seq_len_multiple_of = cast_tuple(seq_len_multiple_of, num_outputs)
+    data = cast_tuple(data, num_outputs)
+
+    # resample if target_sample_hz is not None in the tuple
+
+    data_tuple = tuple((resample(d, sample_hz, target_sample) if exists(target_sample) else d) for d, target_sample in zip(data, cast_tuple(target_sample_hz)))
+
+    output = []
+
+    # process each of the data resample at different frequencies individually
+
+    for data, max_length_, seq_len_multiple_of_ in zip(data_tuple, max_length, seq_len_multiple_of):
+        audio_length = data.size(1)
+
+        # pad or curtail
+
+        if audio_length > max_length_:
+            max_start = audio_length - max_length_
+            start = torch.randint(0, max_start, (1, ))
+            data = data[:, start:start + max_length_]
+
+        else:
+            data = F.pad(data, (0, max_length_ - audio_length), 'constant')
+
+        data = torch.mean(data, dim=0).unsqueeze(0)
+        data = rearrange(data, '1 ... -> ...')
+
+        if exists(max_length_):
+            data = data[:max_length_]
+
+        if exists(seq_len_multiple_of_):
+            data = curtail_to_multiple(data, seq_len_multiple_of_)
+
+        output.append(data.float())
+
+        # cast from list to tuple
+
+        output = tuple(output)
+
+        # return only one audio, if only one target resample freq
+
+        if num_outputs == 1:
+            return label, output[0]
+
+    return label, output
+
+def get_dataset(urls: list):
+    '''
+    Pass s3 urls and get processed torch dataset
+    '''
+    urls = [f'pipe:aws s3 cp {url} -' for url in urls]
+    dataset = (
+           wds.WebDataset(urls)
+           .decode(wds.torch_audio)
+           .to_tuple("flac", "json")
+           .map(preprocess)
+    )
+    return dataset
+
+
 
 @beartype
 class SoundDataset(Dataset):

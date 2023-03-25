@@ -35,7 +35,7 @@ from audiolm_pytorch.audiolm_pytorch import (
     HubertWithKmeans
 )
 
-from audiolm_pytorch.data import SoundDataset, get_dataloader
+from audiolm_pytorch.data import SoundDataset, get_dataloader, get_dataset
 from audiolm_pytorch.utils import AudioConditionerBase
 
 from audiolm_pytorch.version import __version__
@@ -141,6 +141,7 @@ class SoundStreamTrainer(nn.Module):
         dl_num_workers = 0,
         accelerate_kwargs: dict = dict(),
         use_lion = False,
+        cc_dataset=True,
         force_clear_prev_results = None  # set to True | False to skip the prompt
     ):
         super().__init__()
@@ -182,29 +183,40 @@ class SoundStreamTrainer(nn.Module):
         if exists(data_max_length_seconds):
             data_max_length = data_max_length_seconds * soundstream.target_sample_hz
 
-        self.ds = SoundDataset(
-            folder,
-            max_length = data_max_length,
-            target_sample_hz = soundstream.target_sample_hz,
-            seq_len_multiple_of = soundstream.seq_len_multiple_of
-        )
+        if cc_dataset:
+            self.ds = get_dataset(
+                folder,
+                max_length = data_max_length,
+                target_sample_hz = soundstream.target_sample_hz,
+                seq_len_multiple_of = soundstream.seq_len_multiple_of
+            )
+        else:
+            self.ds = SoundDataset(
+                folder,
+                max_length = data_max_length,
+                target_sample_hz = soundstream.target_sample_hz,
+                seq_len_multiple_of = soundstream.seq_len_multiple_of
+            )
 
         # split for validation
 
-        if valid_frac > 0:
-            train_size = int((1 - valid_frac) * len(self.ds))
-            valid_size = len(self.ds) - train_size
-            self.ds, self.valid_ds = random_split(self.ds, [train_size, valid_size], generator = torch.Generator().manual_seed(random_split_seed))
-            self.print(f'training with dataset of {len(self.ds)} samples and validating with randomly splitted {len(self.valid_ds)} samples')
-        else:
-            self.valid_ds = self.ds
-            self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
+        # if valid_frac > 0:
+        #     train_size = int((1 - valid_frac) * len(self.ds))
+        #     valid_size = len(self.ds) - train_size
+        #     self.ds, self.valid_ds = random_split(self.ds, [train_size, valid_size])
+        #     self.print(f'training with dataset of {len(self.ds)} samples and validating with randomly splitted {len(self.valid_ds)} samples')
+        # else:
+        #     self.valid_ds = self.ds
+        #     self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
 
         # dataloader
 
         self.dl = get_dataloader(self.ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True)
 
-        self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True)
+        for b in self.dl:
+            print(b)
+            break
+        self.valid_dl = get_dataloader(self.ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True)
 
         # prepare with accelerator
 
@@ -502,6 +514,8 @@ class SemanticTransformerTrainer(nn.Module):
         batch_size,
         audio_conditioner: Optional[AudioConditionerBase] = None,
         dataset: Optional[Dataset] = None,
+        valid_dataset: Optional[Dataset] = None,
+        num_workers: int = 1,
         data_max_length = None,
         data_max_length_seconds = None,
         folder = None,
@@ -515,7 +529,8 @@ class SemanticTransformerTrainer(nn.Module):
         save_model_every = 1000,
         results_folder = './results',
         accelerate_kwargs: dict = dict(),
-        force_clear_prev_results = None
+        force_clear_prev_results = None,
+        cc_dataset = True
     ):
         super().__init__()
         self.accelerator = Accelerator(**accelerate_kwargs)
@@ -554,49 +569,61 @@ class SemanticTransformerTrainer(nn.Module):
 
             if exists(data_max_length_seconds):
                 data_max_length = data_max_length_seconds * wav2vec.target_sample_hz
-
-            self.ds = SoundDataset(
-                folder,
-                max_length = data_max_length,
-                target_sample_hz = wav2vec.target_sample_hz,
-                seq_len_multiple_of = wav2vec.seq_len_multiple_of
-            )
+            
+            if cc_dataset:
+                self.ds = get_dataset(
+                    folder,
+                    max_length = data_max_length,
+                    target_sample_hz = soundstream.target_sample_hz,
+                    seq_len_multiple_of = soundstream.seq_len_multiple_of
+                )
+            else:
+                self.ds = SoundDataset(
+                    folder,
+                    max_length = data_max_length,
+                    target_sample_hz = wav2vec.target_sample_hz,
+                    seq_len_multiple_of = wav2vec.seq_len_multiple_of
+                )
 
         self.ds_fields = None
 
         # split for validation
 
-        if valid_frac > 0:
-            train_size = int((1 - valid_frac) * len(self.ds))
-            valid_size = len(self.ds) - train_size
-            self.ds, self.valid_ds = random_split(self.ds, [train_size, valid_size], generator = torch.Generator().manual_seed(random_split_seed))
-            self.print(f'training with dataset of {len(self.ds)} samples and validating with randomly splitted {len(self.valid_ds)} samples')
-        else:
-            self.valid_ds = self.ds
-            self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
+        # if valid_frac > 0:
+        #     train_size = int((1 - valid_frac) * len(self.ds))
+        #     valid_size = len(self.ds) - train_size
+        #     self.ds, self.valid_ds = random_split(self.ds, [train_size, valid_size], generator = torch.Generator().manual_seed(random_split_seed))
+        #     self.print(f'training with dataset of {len(self.ds)} samples and validating with randomly splitted {len(self.valid_ds)} samples')
+        # else:
+        #     self.valid_ds = self.ds
+        #     self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
 
         # dataloader
 
-        self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True)
+        self.dl = get_dataloader(dataset, batch_size = batch_size, num_workers=num_workers)
 
-        self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, shuffle = True)
+        self.valid_dl = get_dataloader(valid_dataset, batch_size = batch_size, num_workers=num_workers)
 
+      
         # prepare with accelerator
 
-        (
-            self.train_wrapper,
-            self.optim,
-            self.dl,
-            self.valid_dl
-        ) = self.accelerator.prepare(
-            self.train_wrapper,
-            self.optim,
-            self.dl,
-            self.valid_dl
-        )
+        # (
+        #     self.train_wrapper,
+        #     self.optim,
+        #     self.dl,
+        #     self.valid_dl
+        # ) = self.accelerator.prepare(
+        #     self.train_wrapper,
+        #     self.optim,
+        #     self.dl,
+        #     self.valid_dl
+        # )
+        # for batch in self.dl:
+        #     print(batch)
+        #     break
 
         # dataloader iterators
-
+        
         self.dl_iter = cycle(self.dl)
         self.valid_dl_iter = cycle(self.valid_dl)
 
