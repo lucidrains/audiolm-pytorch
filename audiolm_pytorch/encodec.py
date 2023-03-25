@@ -1,3 +1,4 @@
+from functools import reduce
 from torch import nn
 from encodec import EncodecModel
 from encodec.utils import convert_audio, _linear_overlap_add
@@ -36,7 +37,7 @@ class EncodecWrapper(nn.Module):
 
     @property
     def seq_len_multiple_of(self):
-        return functools.reduce(lambda x, y: x * y, self.strides)
+        return reduce(lambda x, y: x * y, self.strides)
 
     def forward(self, x, x_sampling_rate=24000, **kwargs):
         # kwargs for stuff like return_encoded=True, which SoundStream uses but Encodec doesn't
