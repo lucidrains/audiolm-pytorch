@@ -140,14 +140,19 @@ class SoundStreamTrainer(nn.Module):
         ema_update_every = 10,
         apply_grad_penalty_every = 4,
         dl_num_workers = 0,
+        accelerator: Accelerator = None,
         accelerate_kwargs: dict = dict(),
         use_lion = False,
         force_clear_prev_results = None  # set to True | False to skip the prompt
     ):
         super().__init__()
 
-        kwargs = DistributedDataParallelKwargs(find_unused_parameters = True)
-        self.accelerator = Accelerator(kwargs_handlers = [kwargs], **accelerate_kwargs)
+        if accelerator:
+            self.accelerator = accelerator
+            assert len(accelerate_kwargs) == 0
+        else:
+            kwargs = DistributedDataParallelKwargs(find_unused_parameters = True)
+            self.accelerator = Accelerator(kwargs_handlers = [kwargs], **accelerate_kwargs)
 
         self.soundstream = soundstream
 
