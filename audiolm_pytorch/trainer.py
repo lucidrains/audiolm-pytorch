@@ -963,7 +963,7 @@ class CoarseTransformerTrainer(nn.Module):
         # save model every so often
 
         if self.is_main and not (steps % self.save_model_every):
-            model_path = str(self.results_folder / f'fine.transformer.{steps}.pt')
+            model_path = str(self.results_folder / f'coarse.transformer.{steps}.pt')
             self.save(model_path)
 
             self.print(f'{steps}: saving model to {str(self.results_folder)}')
