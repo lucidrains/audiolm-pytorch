@@ -36,7 +36,7 @@ class SoundDataset(Dataset):
     def __init__(
         self,
         folder,
-        exts = ['flac', 'wav'],
+        exts = ['flac', 'wav', 'mp3', 'webm'],
         max_length: OptionalIntOrTupleInt = None,
         target_sample_hz: OptionalIntOrTupleInt = None,
         seq_len_multiple_of: OptionalIntOrTupleInt = None
