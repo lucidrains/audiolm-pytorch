@@ -453,7 +453,7 @@ class Transformer(nn.Module):
             if exists(cross_attn):
                 assert exists(context)
 
-                x = cross_attn(x, context = context, mask = context_mask)
+                x = cross_attn(x, context = context, mask = context_mask) + x
 
             x = ff(x) + x
 
