@@ -53,7 +53,7 @@ class EncodecWrapper(nn.Module):
         # Extract discrete codes from EnCodec
         with torch.no_grad():
             encoded_frames = self.model.encode(wav)
-        codes = torch.cat([encoded[0] for encoded in encoded_frames], dim=-1)  # [batch, num_quantizers, timesteps]
+        codes = torch.cat([encoded[0] for encoded in encoded_frames], dim=1)  # [batch, timesteps, num_quantizers]
         # in original soundstream, is x, indices, commit_loss. But we only use indices in eval mode, so just keep that.
         return None, codes, None
 
