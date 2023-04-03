@@ -48,6 +48,7 @@ class EncodecWrapper(nn.Module):
         # convert_audio and unsqueeze. The convert_audio function also doesn't play nicely with batches.
 
         # b = batch, t = timesteps, 1 channel for the 24kHz model, 2 channels for the 48kHz model
+        x = x.unsqueeze(0)
         wav = rearrange(x, f'b t -> b {self.model.channels} t')
 
         # Extract discrete codes from EnCodec
