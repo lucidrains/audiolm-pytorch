@@ -31,8 +31,8 @@ OptionalIntOrTupleInt = Optional[Union[int, Tuple[Optional[int], ...]]]
 
 # dataset functions
 
-@beartype
 class SoundDataset(Dataset):
+    @beartype
     def __init__(
         self,
         folder,
