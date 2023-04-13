@@ -305,12 +305,13 @@ class CausalConv1d(nn.Module):
         super().__init__()
         kernel_size = kernel_size
         dilation = kwargs.get('dilation', 1)
-        self.causal_padding = dilation * (kernel_size - 1)
+        stride = kwargs.get('stride', 1)
+        self.causal_padding = dilation * (kernel_size - 1) + (1 - stride)
 
-        self.conv = nn.Conv1d(chan_in, chan_out, kernel_size, **kwargs)
+        self.conv = nn.Conv1d(chan_in, chan_out, kernel_size, stride = stride, **kwargs)
 
     def forward(self, x):
-        x = F.pad(x, (self.causal_padding, 0))
+        x = F.pad(x, (self.causal_padding, 0), mode = 'reflect')
         return self.conv(x)
 
 class CausalConvTranspose1d(nn.Module):
