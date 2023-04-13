@@ -122,7 +122,7 @@ class SoundStreamTrainer(nn.Module):
         num_train_steps: int,
         batch_size: int,
         data_max_length: int = None,
-        data_max_length_seconds: float = None,
+        data_max_length_seconds: Union[int, float] = None,
         folder: str = None,
         train_dataloader: DataLoader = None,
         val_dataloader: DataLoader = None,
