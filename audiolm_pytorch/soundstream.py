@@ -484,6 +484,8 @@ class SoundStream(nn.Module):
 
         self.num_quantizers = rq_num_quantizers
 
+        self.codebook_dim = codebook_dim
+
         self.rq = ResidualVQ(
             dim = codebook_dim,
             num_quantizers = rq_num_quantizers,
