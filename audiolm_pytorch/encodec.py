@@ -81,6 +81,9 @@ class EncodecWrapper(nn.Module):
         #   back to b n anyways, but we'll keep this as a temporary hack just to make things work for now
         return rearrange(result, 'b n -> b 1 n')
 
+    def decode(self, emb):
+        return self.model.decoder(emb)
+
     def _decode_frame(self, quantized_indices):
         # The following code is hacked in from self.model._decode_frame() (Encodec version 0.1.1) where we assume we've
         # already unwrapped the EncodedFrame
