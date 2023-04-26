@@ -200,8 +200,11 @@ def ComplexSTFTResidualUnit(chan_in, chan_out, strides):
     paddings = tuple(map(lambda t: t // 2, kernel_sizes))
 
     return nn.Sequential(
-        ComplexConv2d(chan_in, chan_in, 3, padding = 1),
-        ModReLU(),
+        Residual(Sequential(
+            ComplexConv2d(chan_in, chan_in, 3, padding = 1),
+            ModReLU(),
+            ComplexConv2d(chan_in, chan_in, 3, padding = 1)
+        )),
         ComplexConv2d(chan_in, chan_out, kernel_sizes, stride = strides, padding = paddings)
     )
 
