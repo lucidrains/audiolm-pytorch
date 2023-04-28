@@ -404,6 +404,15 @@ class LocalTransformer(nn.Module):
 
         return x
 
+class FiLM(nn.Module):
+    def __init__(self, dim, dim_cond):
+        super().__init__()
+        self.to_cond = nn.Linear(dim_cond, dim * 2)
+
+    def forward(self, x, cond):
+        gamma, beta = self.to_cond(cond).chunk(2, dim = -1)
+        return x * gamma + beta
+
 class SoundStream(nn.Module):
     def __init__(
         self,
@@ -487,6 +496,8 @@ class SoundStream(nn.Module):
 
         self.encoder_attn = LocalTransformer(**attn_kwargs) if use_local_attn else None
 
+        self.encoder_film = FiLM(codebook_dim, dim_cond = 2)
+
         self.num_quantizers = rq_num_quantizers
 
         self.codebook_dim = codebook_dim
@@ -503,6 +514,8 @@ class SoundStream(nn.Module):
             quantize_dropout = True,
             quantize_dropout_cutoff_index = quantize_dropout_cutoff_index
         )
+
+        self.decoder_film = FiLM(codebook_dim, dim_cond = 2)
 
         self.decoder_attn = LocalTransformer(**attn_kwargs) if use_local_attn else None
 
@@ -569,6 +582,10 @@ class SoundStream(nn.Module):
         self.feature_loss_weight = feature_loss_weight
 
         self.register_buffer('zero', torch.tensor([0.]), persistent = False)
+
+    @property
+    def device(self):
+        return next(self.parameters()).device
 
     @property
     def configs(self):
@@ -641,25 +658,16 @@ class SoundStream(nn.Module):
             *self.encoder.parameters(),
             *self.decoder.parameters(),
             *(self.encoder_attn.parameters() if exists(self.encoder_attn) else []),
-            *(self.decoder_attn.parameters() if exists(self.decoder_attn) else [])
+            *(self.decoder_attn.parameters() if exists(self.decoder_attn) else []),
+            *self.encoder_film.parameters(),
+            *self.decoder_film.parameters()
         ]
 
     @property
     def seq_len_multiple_of(self):
         return functools.reduce(lambda x, y: x * y, self.strides)
 
-    def forward(
-        self,
-        x,
-        target = None,
-        return_encoded = False,
-        return_discr_loss = False,
-        return_discr_losses_separately = False,
-        return_loss_breakdown = False,
-        return_recons_only = False,
-        input_sample_hz = None,
-        apply_grad_penalty = False
-    ):
+    def process_input(self, x, input_sample_hz = None):
         x, ps = pack([x], '* n')
 
         if exists(input_sample_hz):
@@ -670,6 +678,28 @@ class SoundStream(nn.Module):
         if x.ndim == 2:
             x = rearrange(x, 'b n -> b 1 n')
 
+        return x, ps
+
+    def forward(
+        self,
+        x,
+        target = None,
+        is_denoising = None, # if you want to learn film conditioners that teach the soundstream to denoise - target would need to be passed in above
+        return_encoded = False,
+        return_discr_loss = False,
+        return_discr_losses_separately = False,
+        return_loss_breakdown = False,
+        return_recons_only = False,
+        input_sample_hz = None,
+        apply_grad_penalty = False
+    ):
+        assert not (exists(is_denoising) and not exists(target))
+
+        x, ps = self.process_input(x, input_sample_hz = input_sample_hz)
+
+        if exists(target):
+            target, _ = self.process_input(target, input_sample_hz = input_sample_hz)
+
         orig_x = x.clone()
 
         x = self.encoder(x)
@@ -679,10 +709,17 @@ class SoundStream(nn.Module):
         if exists(self.encoder_attn):
             x = self.encoder_attn(x)
 
+        if exists(is_denoising):
+            denoise_input = torch.tensor([is_denoising, not is_denoising], dtype = x.dtype, device = self.device) # [1, 0] for denoise, [0, 1] for not denoising
+            x = self.encoder_film(x, denoise_input)
+
         x, indices, commit_loss = self.rq(x)
 
         if return_encoded:
             return x, indices, commit_loss
+
+        if exists(is_denoising):
+            x = self.decoder_film(x, denoise_input)
 
         if exists(self.decoder_attn):
             x = self.decoder_attn(x)
