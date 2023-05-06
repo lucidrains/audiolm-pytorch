@@ -331,16 +331,13 @@ $ accelerate launch train.py
 - [x] add structured dropout from forgetful causal masking, far better than traditional dropouts
 - [x] figure out how to suppress logging in fairseq
 - [x] assert that all three transformers passed into audiolm is compatible
+- [x] allow for specialized relative positional embeddings in fine transformer based on absolute matching positions of quantizers between coarse and fine
 
-- [ ] figure out how to do the normalization across each dimension mentioned in the paper, but ignore it for v1 of the framework
-- [ ] DRY a little at the end
+- [ ] allow for grouped residual vq in soundstream (use `GroupedResidualVQ` from vector-quantize-pytorch lib), from <a href="https://arxiv.org/abs/2305.02765">hifi-codec</a>
 - [ ] test with speech synthesis for starters
-- [ ] add option to use flash attention
-- [ ] simplify training even more within AudioLM class
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
 - [ ] return a list of waves in the case of variable lengthed audio
 - [ ] just take care of the edge case in coarse transformer text conditioned training, where the raw wave is resampled at different frequencies. autodetermine how to route based on length
-- [ ] allow for specialized relative positional embeddings in fine transformer based on absolute matching positions of quantizers between coarse and fine
 
 ## Citations
 
