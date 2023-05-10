@@ -333,8 +333,9 @@ $ accelerate launch train.py
 - [x] figure out how to suppress logging in fairseq
 - [x] assert that all three transformers passed into audiolm is compatible
 - [x] allow for specialized relative positional embeddings in fine transformer based on absolute matching positions of quantizers between coarse and fine
+- [x] allow for grouped residual vq in soundstream (use `GroupedResidualVQ` from vector-quantize-pytorch lib), from <a href="https://arxiv.org/abs/2305.02765">hifi-codec</a>
 
-- [ ] allow for grouped residual vq in soundstream (use `GroupedResidualVQ` from vector-quantize-pytorch lib), from <a href="https://arxiv.org/abs/2305.02765">hifi-codec</a>
+- [ ] redo the positional embeddings in the presence of groups in residual vq
 - [ ] test with speech synthesis for starters
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
 - [ ] return a list of waves in the case of variable lengthed audio
