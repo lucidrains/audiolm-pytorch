@@ -34,7 +34,7 @@ setup(
     'torchaudio',
     'transformers',
     'tqdm',
-    'vector-quantize-pytorch>=1.2.2'
+    'vector-quantize-pytorch>=1.4.1'
   ],
   classifiers=[
     'Development Status :: 4 - Beta',

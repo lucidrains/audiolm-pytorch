@@ -17,7 +17,7 @@ from torchaudio.functional import resample
 
 from einops import rearrange, reduce, pack, unpack
 
-from vector_quantize_pytorch import ResidualVQ
+from vector_quantize_pytorch import GroupedResidualVQ
 
 from local_attention import LocalMHA
 from local_attention.transformer import FeedForward, DynamicPositionBias
@@ -426,6 +426,7 @@ class SoundStream(nn.Module):
         rq_commitment_weight = 1.,
         rq_ema_decay = 0.95,
         rq_quantize_dropout_multiple_of = 1,
+        rq_groups = 1,
         input_channels = 1,
         discr_multi_scales = (1, 0.5, 0.25),
         stft_normalized = False,
@@ -502,10 +503,13 @@ class SoundStream(nn.Module):
 
         self.codebook_dim = codebook_dim
 
-        self.rq = ResidualVQ(
+        self.rq_groups = rq_groups
+
+        self.rq = GroupedResidualVQ(
             dim = codebook_dim,
             num_quantizers = rq_num_quantizers,
             codebook_size = codebook_size,
+            groups = rq_groups,
             decay = rq_ema_decay,
             commitment_weight = rq_commitment_weight,
             quantize_dropout_multiple_of = rq_quantize_dropout_multiple_of,
@@ -592,8 +596,10 @@ class SoundStream(nn.Module):
         return pickle.loads(self._configs)
 
     def decode_from_codebook_indices(self, quantized_indices):
+        quantized_indices = rearrange(quantized_indices, 'b n (g q) -> g b n q', g = self.rq_groups)
+
         codes = self.rq.get_codes_from_indices(quantized_indices)
-        x = reduce(codes, 'q ... -> ...', 'sum')
+        x = reduce(codes, 'g q b n d -> b n (g d)', 'sum')
 
         return self.decode(x)
 
@@ -716,6 +722,7 @@ class SoundStream(nn.Module):
         x, indices, commit_loss = self.rq(x)
 
         if return_encoded:
+            indices = rearrange(indices, 'g b n q -> b n (g q)')
             return x, indices, commit_loss
 
         if exists(is_denoising):

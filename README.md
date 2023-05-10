@@ -484,3 +484,11 @@ $ accelerate launch train.py
     pages   = {7132-7141}
 }
 ```
+
+```bibtex
+@inproceedings{Yang2023HiFiCodecGV,
+    title   = {HiFi-Codec: Group-residual Vector quantization for High Fidelity Audio Codec},
+    author  = {Dongchao Yang and Songxiang Liu and Rongjie Huang and Jinchuan Tian and Chao Weng and Yuexian Zou},
+    year    = {2023}
+}
+```

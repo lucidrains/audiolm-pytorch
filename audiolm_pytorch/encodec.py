@@ -41,6 +41,7 @@ class EncodecWrapper(nn.Module):
         assert self.target_sample_hz == 24000, "haven't done anything with non-24kHz yet"
 
         self.codebook_dim = 128
+        self.rq_groups = 1
         self.num_quantizers = num_quantizers
         self.strides = strides # used in seq_len_multiple_of
 

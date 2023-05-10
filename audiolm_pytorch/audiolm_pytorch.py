@@ -1293,7 +1293,7 @@ class CoarseTransformerWrapper(nn.Module):
 
         self.semantic_cross_entropy_loss_weight = semantic_cross_entropy_loss_weight
 
-        self.num_coarse_quantizers = transformer.num_coarse_quantizers
+        self.num_coarse_quantizers = transformer.num_coarse_quantizers * codec.rq_groups
         self.semantic_eos_id = transformer.semantic_eos_id
         self.coarse_eos_id = transformer.coarse_eos_id
 
@@ -1506,11 +1506,11 @@ class FineTransformerWrapper(nn.Module):
 
         assert not (exists(audio_conditioner) and not transformer.has_condition), 'if conditioning on audio embeddings from mulan, transformer has_condition must be set to True'
 
-        self.num_fine_quantizers = transformer.num_fine_quantizers
-        self.num_coarse_quantizers = transformer.num_coarse_quantizers
+        self.num_fine_quantizers = transformer.num_fine_quantizers * codec.rq_groups
+        self.num_coarse_quantizers = transformer.num_coarse_quantizers * codec.rq_groups
 
         if exists(codec):
-            assert (self.num_fine_quantizers + self.num_coarse_quantizers) == codec.num_quantizers, 'number of fine and coarse quantizers on fine transformer must add up to total number of quantizers on codec'
+            assert (self.num_fine_quantizers + self.num_coarse_quantizers) == (codec.num_quantizers * codec.rq_groups), 'number of fine and coarse quantizers on fine transformer must add up to total number of quantizers on codec'
 
         self.eos_id = transformer.eos_id
 
