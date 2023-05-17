@@ -351,7 +351,8 @@ class SoundStreamTrainer(nn.Module):
         for key, _ in self.multiscale_discriminator_iter():
             discr_optim = getattr(self, key)
             discr_optim.load_state_dict(pkg[key])
-        self.steps = torch.tensor([checkpoint_num_steps(path)], device=self.device)
+        # + 1 to start from the next step and avoid overwriting the last checkpoint
+        self.steps = torch.tensor([checkpoint_num_steps(path + 1)], device=self.device)
 
     def multiscale_discriminator_iter(self):
         for ind, discr in enumerate(self.unwrapped_soundstream.discriminators):
@@ -678,7 +679,9 @@ class SemanticTransformerTrainer(nn.Module):
         transformer = self.accelerator.unwrap_model(self.transformer)
         transformer.load_state_dict(pkg['model'])
         self.optim.load_state_dict(pkg['optim'])
-        self.steps = torch.tensor([checkpoint_num_steps(path)], device=self.device)
+        # + 1 to start from the next step and avoid overwriting the last checkpoint
+        self.steps = torch.tensor([checkpoint_num_steps(path + 1)], device=self.device)
+
 
     def print(self, msg):
         self.accelerator.print(msg)
@@ -929,7 +932,9 @@ class CoarseTransformerTrainer(nn.Module):
         transformer.load_state_dict(pkg['model'])
 
         self.optim.load_state_dict(pkg['optim'])
-        self.steps = torch.tensor([checkpoint_num_steps(path)], device=self.device)
+        # + 1 to start from the next step and avoid overwriting the last checkpoint
+        self.steps = torch.tensor([checkpoint_num_steps(path + 1)], device=self.device)
+
 
     def print(self, msg):
         self.accelerator.print(msg)
@@ -1174,7 +1179,9 @@ class FineTransformerTrainer(nn.Module):
         transformer.load_state_dict(pkg['model'])
 
         self.optim.load_state_dict(pkg['optim'])
-        self.steps = torch.tensor([checkpoint_num_steps(path)], device=self.device)
+        # + 1 to start from the next step and avoid overwriting the last checkpoint
+        self.steps = torch.tensor([checkpoint_num_steps(path + 1)], device=self.device)
+
 
     def print(self, msg):
         self.accelerator.print(msg)
