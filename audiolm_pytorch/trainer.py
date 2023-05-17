@@ -1,3 +1,4 @@
+import re
 from math import sqrt
 import copy
 from random import choice
@@ -110,6 +111,14 @@ def determine_types(data, config):
             raise TypeError(f'unable to determine type of {data}')
 
     return tuple(output)
+
+def checkpoint_num_steps(checkpoint_path):
+    """Returns the number of steps trained from a checkpoint based on the filename.
+
+    Filename format assumed to be something like "/path/to/semantic.transformer.20000.pt" which is
+    for 20k train steps. Returns 20000 in that case.
+    """
+    return int(re.findall(r'\d+', checkpoint_path)[-1])
 
 # main trainer class
 
@@ -342,6 +351,7 @@ class SoundStreamTrainer(nn.Module):
         for key, _ in self.multiscale_discriminator_iter():
             discr_optim = getattr(self, key)
             discr_optim.load_state_dict(pkg[key])
+        self.steps = torch.tensor([checkpoint_num_steps(path)], device=self.device)
 
     def multiscale_discriminator_iter(self):
         for ind, discr in enumerate(self.unwrapped_soundstream.discriminators):
@@ -668,6 +678,7 @@ class SemanticTransformerTrainer(nn.Module):
         transformer = self.accelerator.unwrap_model(self.transformer)
         transformer.load_state_dict(pkg['model'])
         self.optim.load_state_dict(pkg['optim'])
+        self.steps = torch.tensor([checkpoint_num_steps(path)], device=self.device)
 
     def print(self, msg):
         self.accelerator.print(msg)
@@ -918,6 +929,7 @@ class CoarseTransformerTrainer(nn.Module):
         transformer.load_state_dict(pkg['model'])
 
         self.optim.load_state_dict(pkg['optim'])
+        self.steps = torch.tensor([checkpoint_num_steps(path)], device=self.device)
 
     def print(self, msg):
         self.accelerator.print(msg)
@@ -1162,6 +1174,7 @@ class FineTransformerTrainer(nn.Module):
         transformer.load_state_dict(pkg['model'])
 
         self.optim.load_state_dict(pkg['optim'])
+        self.steps = torch.tensor([checkpoint_num_steps(path)], device=self.device)
 
     def print(self, msg):
         self.accelerator.print(msg)
