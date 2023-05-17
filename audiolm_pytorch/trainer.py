@@ -118,7 +118,7 @@ def checkpoint_num_steps(checkpoint_path):
     Filename format assumed to be something like "/path/to/semantic.transformer.20000.pt" which is
     for 20k train steps. Returns 20000 in that case.
     """
-    return int(re.findall(r'\d+', checkpoint_path)[-1])
+    return int(re.findall(r'\d+', str(checkpoint_path))[-1])
 
 # main trainer class
 
