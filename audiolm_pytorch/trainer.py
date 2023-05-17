@@ -352,7 +352,7 @@ class SoundStreamTrainer(nn.Module):
             discr_optim = getattr(self, key)
             discr_optim.load_state_dict(pkg[key])
         # + 1 to start from the next step and avoid overwriting the last checkpoint
-        self.steps = torch.tensor([checkpoint_num_steps(path + 1)], device=self.device)
+        self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
 
     def multiscale_discriminator_iter(self):
         for ind, discr in enumerate(self.unwrapped_soundstream.discriminators):
@@ -680,7 +680,7 @@ class SemanticTransformerTrainer(nn.Module):
         transformer.load_state_dict(pkg['model'])
         self.optim.load_state_dict(pkg['optim'])
         # + 1 to start from the next step and avoid overwriting the last checkpoint
-        self.steps = torch.tensor([checkpoint_num_steps(path + 1)], device=self.device)
+        self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
 
 
     def print(self, msg):
@@ -933,7 +933,7 @@ class CoarseTransformerTrainer(nn.Module):
 
         self.optim.load_state_dict(pkg['optim'])
         # + 1 to start from the next step and avoid overwriting the last checkpoint
-        self.steps = torch.tensor([checkpoint_num_steps(path + 1)], device=self.device)
+        self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
 
 
     def print(self, msg):
@@ -1180,7 +1180,7 @@ class FineTransformerTrainer(nn.Module):
 
         self.optim.load_state_dict(pkg['optim'])
         # + 1 to start from the next step and avoid overwriting the last checkpoint
-        self.steps = torch.tensor([checkpoint_num_steps(path + 1)], device=self.device)
+        self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
 
 
     def print(self, msg):
