@@ -504,6 +504,7 @@ class SoundStream(nn.Module):
         self.num_quantizers = rq_num_quantizers
 
         self.codebook_dim = codebook_dim
+        self.codebook_size = codebook_size
 
         self.rq_groups = rq_groups
 
