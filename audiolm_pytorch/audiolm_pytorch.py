@@ -277,7 +277,7 @@ class Attention(nn.Module):
         self.attn_dropout = nn.Dropout(dropout)
 
         self.num_null_kv = num_null_kv
-        self.null_kv = nn.Parameter(torch.randn(2, num_null_kv, dim_head))
+        self.null_kv = nn.Parameter(torch.randn(2, num_null_kv, dim_head)) if num_null_kv > 0 else None
 
         self.to_q = nn.Linear(dim, inner_dim, bias = False)
         self.to_kv = nn.Linear(dim_context, dim_head * 2, bias = False)
