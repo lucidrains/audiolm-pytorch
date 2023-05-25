@@ -428,6 +428,8 @@ class SoundStream(nn.Module):
         rq_ema_decay = 0.95,
         rq_quantize_dropout_multiple_of = 1,
         rq_groups = 1,
+        rq_stochastic_sample_codes = False,
+        rq_kwargs: dict = {},
         input_channels = 1,
         discr_multi_scales = (1, 0.5, 0.25),
         stft_normalized = False,
@@ -519,7 +521,9 @@ class SoundStream(nn.Module):
             kmeans_init = True,
             threshold_ema_dead_code = 2,
             quantize_dropout = True,
-            quantize_dropout_cutoff_index = quantize_dropout_cutoff_index
+            quantize_dropout_cutoff_index = quantize_dropout_cutoff_index,
+            stochastic_sample_codes = rq_stochastic_sample_codes,
+            **rq_kwargs
         )
 
         self.decoder_film = FiLM(codebook_dim, dim_cond = 2)
