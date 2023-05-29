@@ -174,6 +174,16 @@ class ModReLU(nn.Module):
         return F.relu(torch.abs(x) + self.b) * torch.exp(1.j * torch.angle(x))
 
 class ComplexConv2d(nn.Module):
+    '''
+    This is a workaround since torch's FSDP doesn't fully support complex numbers.
+    Once it does, we can switch to something like this:
+
+    ```
+    def ComplexConv2d(*args, **kwargs):
+        kwargs['dtype'] = torch.complex64
+        return nn.Conv2d(*args, **kwargs)
+    ```
+    '''
     def __init__(
         self,
         dim,
@@ -183,15 +193,21 @@ class ComplexConv2d(nn.Module):
         padding = 0
     ):
         super().__init__()
-        conv = nn.Conv2d(dim, dim_out, kernel_size, dtype = torch.complex64)
-        self.weight = nn.Parameter(torch.view_as_real(conv.weight))
-        self.bias = nn.Parameter(torch.view_as_real(conv.bias))
+
+        real = nn.Conv2d(dim, dim_out, kernel_size)
+        imag = nn.Conv2d(dim, dim_out, kernel_size)
+
+        self.weight_r = nn.Parameter(real.weight)
+        self.weight_i = nn.Parameter(imag.weight)
+        self.bias_r = nn.Parameter(real.bias)
+        self.bias_i = nn.Parameter(imag.bias)
 
         self.stride = stride
         self.padding = padding
 
     def forward(self, x):
-        weight, bias = map(torch.view_as_complex, (self.weight, self.bias))
+        weight = self.weight_r + 1.j * self.weight_i
+        bias = self.bias_r + 1.j * self.bias_i
 
         x = x.to(weight.dtype)
         return F.conv2d(x, weight, bias, stride = self.stride, padding = self.padding)
