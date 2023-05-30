@@ -88,35 +88,38 @@ class MultiScaleDiscriminator(nn.Module):
         self,
         channels = 16,
         layers = 4,
-        groups = 4,
+        groups = (4, 16, 64, 256),
         chan_max = 1024,
         input_channels = 1
     ):
         super().__init__()
-        self.init_conv = nn.Conv1d(input_channels, channels, 7)
+        self.init_conv = nn.Conv1d(input_channels, channels, 15, padding = 7)
         self.conv_layers = nn.ModuleList([])
 
         curr_channels = channels
 
-        for _ in range(layers):
+        for _, group in zip(range(layers), groups):
             chan_out = min(curr_channels * 4, chan_max)
 
             self.conv_layers.append(nn.Sequential(
-                nn.Conv1d(curr_channels, chan_out, 8, stride = 4, padding = 4, groups = groups),
+                nn.Conv1d(curr_channels, chan_out, 41, stride = 4, padding = 20, groups = group),
                 leaky_relu()
             ))
 
             curr_channels = chan_out
 
         self.final_conv = nn.Sequential(
-            nn.Conv1d(curr_channels, curr_channels, 3),
+            nn.Conv1d(curr_channels, curr_channels, 5, padding = 2),
             leaky_relu(),
-            nn.Conv1d(curr_channels, 1, 1),
+            nn.Conv1d(curr_channels, 1, 3, padding = 1),
         )
 
-    def forward(self, x, return_intermediates = False):
+    def forward(
+        self,
+        x,
+        return_intermediates = False
+    ):
         x = self.init_conv(x)
-
         intermediates = []
 
         for layer in self.conv_layers:
