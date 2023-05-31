@@ -98,10 +98,11 @@ class EncodecWrapper(nn.Module):
         # allow for returning of sum of quantized embeddings
 
         emb = None
+
         if return_encoded:
             emb = self.get_emb_from_indices(codes)
-        if emb:
             emb, = unpack(emb, ps, '* n c')
+
         codes, = unpack(codes, ps, '* n q')
 
         return emb, codes, None
