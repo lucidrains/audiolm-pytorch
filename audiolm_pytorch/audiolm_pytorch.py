@@ -1121,6 +1121,9 @@ class SemanticTransformerWrapper(nn.Module):
     def device(self):
         return next(self.parameters()).device
 
+    def embed_text(self, text):
+        return self.transformer.embed_text(text, output_device = self.device)
+
     @eval_decorator
     @torch.no_grad()
     @beartype
