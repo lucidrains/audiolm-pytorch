@@ -808,6 +808,7 @@ class FineTransformer(nn.Module):
         cond_drop_prob = 0.5,
         grad_shrink_alpha = 0.1,
         project_coarse_logits = True,
+        pad_id = -1,
         **kwargs
     ):
         super().__init__()
@@ -831,6 +832,7 @@ class FineTransformer(nn.Module):
         self.coarse_quantize_embedding = nn.Embedding(num_coarse_quantizers, dim)
         self.fine_quantize_embedding = nn.Embedding(num_fine_quantizers, dim)
 
+        self.pad_id = pad_id
         self.eos_id = codebook_size
 
         text_dim = default(cond_dim, get_encoded_dim(t5_name))
@@ -904,6 +906,9 @@ class FineTransformer(nn.Module):
         return_only_fine_logits = False
     ):
         b, device = coarse_token_ids.shape[0], coarse_token_ids.device
+
+        # handle text conditioning
+
         has_text = exists(text) or exists(text_embeds)
         assert not (self.has_condition ^ has_text)
 
@@ -923,6 +928,21 @@ class FineTransformer(nn.Module):
             text_mask = rearrange(keep_mask, 'b -> b 1') & text_mask
 
         coarse_token_ids, fine_token_ids = map(lambda t: rearrange(t, 'b ... -> b (...)'), (coarse_token_ids, fine_token_ids))
+
+        # do not attend to any of the coarse padding tokens or coarse end token either
+
+        coarse_self_attn_mask = (coarse_token_ids != self.pad_id) & (coarse_token_ids != self.eos_id)
+        coarse_token_ids = coarse_token_ids.masked_fill(~coarse_self_attn_mask, 0)
+
+        fine_token_seq_len = fine_token_ids.shape[-1]
+        coarse_self_attn_mask = F.pad(coarse_self_attn_mask, (1, fine_token_seq_len + 1), value = True)
+
+        if exists(self_attn_mask):
+            self_attn_mask &= coarse_self_attn_mask
+        else:
+            self_attn_mask = coarse_self_attn_mask
+
+        # prepare coarse and fine token embeddings
 
         b, n = coarse_token_ids.shape
 
@@ -1664,18 +1684,12 @@ class FineTransformerWrapper(nn.Module):
             fine_labels = fine_token_ids
             fine_token_ids = fine_token_ids[:, :-1]
 
-        # do not attend to any of the coarse padding tokens or coarse end token either
-
-        self_attn_mask = coarse_token_ids != self.pad_id
-        coarse_token_ids = coarse_token_ids.masked_fill(~self_attn_mask, 0)
-
-        fine_token_seq_len = fine_token_ids.shape[-1]
-        self_attn_mask = F.pad(self_attn_mask, (1, fine_token_seq_len + 1), value = True)
-
         # forgetful causal mask - structured dropout
 
+        self_attn_mask = None
+
         if self.mask_prob > 0 and self.training:
-            self_attn_mask &= generate_mask_with_prob(self_attn_mask.shape, self.mask_prob, device = self_attn_mask.device)
+            self_attn_mask = generate_mask_with_prob(self_attn_mask.shape, self.mask_prob, device = self_attn_mask.device)
 
         coarse_logits, fine_logits = self.transformer(
             coarse_token_ids = coarse_token_ids,
