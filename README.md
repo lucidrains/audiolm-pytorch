@@ -127,7 +127,8 @@ wav2vec = HubertWithKmeans(
 semantic_transformer = SemanticTransformer(
     num_semantic_tokens = wav2vec.codebook_size,
     dim = 1024,
-    depth = 6
+    depth = 6,
+    flash_attn = True
 ).cuda()
 
 
@@ -161,7 +162,8 @@ coarse_transformer = CoarseTransformer(
     codebook_size = 1024,
     num_coarse_quantizers = 3,
     dim = 512,
-    depth = 6
+    depth = 6,
+    flash_attn = True
 )
 
 trainer = CoarseTransformerTrainer(
@@ -190,7 +192,8 @@ fine_transformer = FineTransformer(
     num_fine_quantizers = 5,
     codebook_size = 1024,
     dim = 512,
-    depth = 6
+    depth = 6,
+    flash_attn = True
 )
 
 trainer = FineTransformerTrainer(
@@ -336,8 +339,8 @@ $ accelerate launch train.py
 - [x] assert that all three transformers passed into audiolm is compatible
 - [x] allow for specialized relative positional embeddings in fine transformer based on absolute matching positions of quantizers between coarse and fine
 - [x] allow for grouped residual vq in soundstream (use `GroupedResidualVQ` from vector-quantize-pytorch lib), from <a href="https://arxiv.org/abs/2305.02765">hifi-codec</a>
+- [x] add flash attention with <a href="https://arxiv.org/abs/2305.19466">NoPE</a>
 
-- [ ] add flash attention with <a href="https://arxiv.org/abs/2305.19466">NoPE</a>
 - [ ] redo the positional embeddings in the presence of groups in residual vq
 - [ ] test with speech synthesis for starters
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
@@ -495,5 +498,24 @@ $ accelerate launch train.py
     title   = {HiFi-Codec: Group-residual Vector quantization for High Fidelity Audio Codec},
     author  = {Dongchao Yang and Songxiang Liu and Rongjie Huang and Jinchuan Tian and Chao Weng and Yuexian Zou},
     year    = {2023}
+}
+```
+
+```bibtex
+@article{Kazemnejad2023TheIO,
+    title   = {The Impact of Positional Encoding on Length Generalization in Transformers},
+    author  = {Amirhossein Kazemnejad and Inkit Padhi and Karthikeyan Natesan Ramamurthy and Payel Das and Siva Reddy},
+    journal = {ArXiv},
+    year    = {2023},
+    volume  = {abs/2305.19466}
+}
+```
+
+```bibtex
+@inproceedings{dao2022flashattention,
+    title   = {Flash{A}ttention: Fast and Memory-Efficient Exact Attention with {IO}-Awareness},
+    author  = {Dao, Tri and Fu, Daniel Y. and Ermon, Stefano and Rudra, Atri and R{\'e}, Christopher},
+    booktitle = {Advances in Neural Information Processing Systems},
+    year    = {2022}
 }
 ```
