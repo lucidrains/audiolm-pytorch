@@ -23,6 +23,7 @@ from torchaudio.functional import resample
 from audiolm_pytorch.soundstream import SoundStream
 from audiolm_pytorch.encodec import EncodecWrapper
 from audiolm_pytorch.utils import AudioConditionerBase
+from audiolm_pytorch.attend import Attend
 
 from tqdm import tqdm
 
@@ -220,17 +221,6 @@ class RelativePositionBias(nn.Module):
 
 # feedforward
 
-class CausalDSConv(nn.Module):
-    def __init__(self, dim):
-        super().__init__()
-        self.ds_conv = nn.Conv1d(dim, dim, 3, bias = False, groups = dim)
-
-    def forward(self, x):
-        x = rearrange(x, 'b n c -> b c n')
-        x = F.pad(x, (2, 0))
-        x = self.ds_conv(x)
-        return rearrange(x, 'b c n -> b n c')
-
 class GEGLU(nn.Module):
     def forward(self, x):
         x, gate = x.chunk(2, dim = -1)
@@ -241,7 +231,6 @@ def FeedForward(dim, mult = 4, dropout = 0.1):
     return nn.Sequential(
         LayerNorm(dim),
         nn.Linear(dim, inner_dim * 2, bias = False),
-        CausalDSConv(inner_dim * 2),
         GEGLU(),
         LayerNorm(inner_dim),
         nn.Dropout(dropout),
@@ -261,11 +250,11 @@ class Attention(nn.Module):
         norm_context = False,
         num_null_kv = 0,
         dropout = 0.1,
-        scale = 8
+        scale = 8,
+        flash = False
     ):
         super().__init__()
         self.heads = heads
-        self.scale = scale
         self.causal = causal
         inner_dim = dim_head * heads
 
@@ -282,8 +271,11 @@ class Attention(nn.Module):
         self.to_q = nn.Linear(dim, inner_dim, bias = False)
         self.to_kv = nn.Linear(dim_context, dim_head * 2, bias = False)
 
-        self.q_scale = nn.Parameter(torch.ones(dim_head))
-        self.k_scale = nn.Parameter(torch.ones(dim_head))
+        self.attend = Attend(
+            flash = flash,
+            dropout = dropout,
+            causal = causal
+        )
 
         self.to_out = nn.Sequential(
             nn.Linear(inner_dim, dim, bias = False),
@@ -343,38 +335,14 @@ class Attention(nn.Module):
 
         q = rearrange(q, 'b n (h d) -> b h n d', h = self.heads)
 
-        # new technique, rmsnormed queries and keys, first used by 22B parameter model successfully https://arxiv.org/abs/2302.05442
-
-        q, k = map(l2norm, (q, k))
-        q = q * self.q_scale
-        k = k * self.k_scale
-
-        # similarities
-
-        sim = einsum('b h i d, b j d -> b h i j', q, k) * self.scale
-
-        if exists(attn_bias):
-            attn_bias = F.pad(attn_bias, (self.num_null_kv, 0), value = 0.)
-            sim = sim + attn_bias
+        # handle mask and null key / value
 
         if exists(mask):
             mask = F.pad(mask, (self.num_null_kv, 0), value = True)
-            mask = rearrange(mask, 'b j -> b 1 1 j')
-            sim = sim.masked_fill(~mask, -torch.finfo(sim.dtype).max)
-
-        if self.causal:
-            i, j = sim.shape[-2:]
-            causal_mask = torch.ones((i, j), dtype = torch.bool, device = x.device).triu(j - i + 1)
-            sim = sim.masked_fill(causal_mask, -torch.finfo(sim.dtype).max)
 
         # attention
 
-        attn = sim.softmax(dim = -1)
-        attn = self.attn_dropout(attn)
-
-        # aggregate
-
-        out = einsum('b h i j, b j d -> b h i d', attn, v)
+        out = self.attend(q, k, v, attn_bias = attn_bias, mask = mask)
 
         # merge heads
 
@@ -397,10 +365,14 @@ class Transformer(nn.Module):
         grad_shrink_alpha = 0.1,
         cond_as_self_attn_prefix = False,
         rel_pos_bias = True,
+        flash_attn = False,
         **kwargs
     ):
         super().__init__()
+        rel_pos_bias = rel_pos_bias and not flash_attn
+
         assert not (cross_attend and cond_as_self_attn_prefix)
+
         self.dim_context = default(dim_context, dim)
 
         self.cond_as_self_attn_prefix = cond_as_self_attn_prefix
@@ -413,8 +385,8 @@ class Transformer(nn.Module):
 
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                Attention(dim = dim, heads = heads, dropout = attn_dropout, causal = True, **kwargs),
-                Attention(dim = dim, heads = heads, dropout = attn_dropout, dim_context = dim_context, num_null_kv = 1, norm_context = True, **kwargs) if cross_attend else None,
+                Attention(dim = dim, heads = heads, dropout = attn_dropout, flash = flash_attn, causal = True, **kwargs),
+                Attention(dim = dim, heads = heads, dropout = attn_dropout, dim_context = dim_context, flash = flash_attn, num_null_kv = 1, norm_context = True, **kwargs) if cross_attend else None,
                 FeedForward(dim = dim, dropout = ff_dropout)
             ]))
 
@@ -479,9 +451,13 @@ class SemanticTransformer(nn.Module):
         cond_as_self_attn_prefix = False,
         cond_drop_prob = 0.5,
         grad_shrink_alpha = 0.1,
+        rel_pos_bias = True,
+        flash_attn = False,
         **kwargs
     ):
         super().__init__()
+        rel_pos_bias = rel_pos_bias and not flash_attn
+
         self.num_semantic_tokens = num_semantic_tokens
 
         if audio_text_condition:
@@ -509,6 +485,8 @@ class SemanticTransformer(nn.Module):
             cross_attend = has_condition and not cond_as_self_attn_prefix,
             cond_as_self_attn_prefix = cond_as_self_attn_prefix,
             grad_shrink_alpha = grad_shrink_alpha,
+            rel_pos_bias = rel_pos_bias,
+            flash_attn = flash_attn,
             **kwargs
         )
 
@@ -602,9 +580,13 @@ class CoarseTransformer(nn.Module):
         cond_drop_prob = 0.5,
         grad_shrink_alpha = 0.1,
         project_semantic_logits = True,
+        rel_pos_bias = True,
+        flash_attn = False,
         **kwargs
     ):
         super().__init__()
+        rel_pos_bias = rel_pos_bias and not flash_attn
+
         self.num_semantic_tokens = num_semantic_tokens
 
         if audio_text_condition:
@@ -630,7 +612,7 @@ class CoarseTransformer(nn.Module):
         text_dim = default(cond_dim, get_encoded_dim(t5_name))
         self.proj_text_embed = nn.Linear(text_dim, dim, bias = False) if text_dim != dim else nn.Identity()
 
-        self.cross_attn_bias = nn.Parameter(torch.zeros(heads, 1, 1))
+        self.cross_attn_bias = nn.Parameter(torch.zeros(heads, 1, 1)) if rel_pos_bias else None
 
         self.transformer = Transformer(
             dim = dim,
@@ -641,6 +623,8 @@ class CoarseTransformer(nn.Module):
             cross_attend = has_condition and not cond_as_self_attn_prefix,
             cond_as_self_attn_prefix = cond_as_self_attn_prefix,
             grad_shrink_alpha = grad_shrink_alpha,
+            rel_pos_bias = rel_pos_bias,
+            flash_attn = flash_attn,
             **kwargs
         )
 
@@ -737,16 +721,20 @@ class CoarseTransformer(nn.Module):
         # engineer the attention bias so that cross attention is not dominated by relative positions
 
         seq_len = tokens.shape[-2]
-        attn_bias = self.transformer.rel_pos_bias(seq_len)
 
-        is_semantic = arange(seq_len) < (semantic_seq_len + 1) # semantic seq len + start token
-        is_cross_attn = rearrange(is_semantic, 'i -> i 1') ^ rearrange(is_semantic, 'j -> 1 j')
+        attn_bias = None
 
-        attn_bias = torch.where(
-            is_cross_attn,
-            self.cross_attn_bias,
-            attn_bias
-        )
+        if exists(self.transformer.rel_pos_bias):
+            attn_bias = self.transformer.rel_pos_bias(seq_len)
+
+            is_semantic = arange(seq_len) < (semantic_seq_len + 1) # semantic seq len + start token
+            is_cross_attn = rearrange(is_semantic, 'i -> i 1') ^ rearrange(is_semantic, 'j -> 1 j')
+
+            attn_bias = torch.where(
+                is_cross_attn,
+                self.cross_attn_bias,
+                attn_bias
+            )
 
         # attend
 
@@ -809,9 +797,12 @@ class FineTransformer(nn.Module):
         grad_shrink_alpha = 0.1,
         project_coarse_logits = True,
         pad_id = -1,
+        rel_pos_bias = True,
+        flash_attn = False,
         **kwargs
     ):
         super().__init__()
+        rel_pos_bias = rel_pos_bias and not flash_attn
 
         if audio_text_condition:
             has_condition = True
@@ -848,21 +839,23 @@ class FineTransformer(nn.Module):
             cond_as_self_attn_prefix = cond_as_self_attn_prefix,
             rel_pos_bias = False,
             grad_shrink_alpha = grad_shrink_alpha,
+            flash_attn = flash_attn,
             **kwargs
         )
 
         # doing a specialized attn bias so that corresponding time steps at fine and coarse sequences attend to each other better
 
-        self.null_pos_bias = nn.Parameter(torch.randn(heads, 1, 1))
+        self.null_pos_bias = nn.Parameter(torch.randn(heads, 1, 1)) if rel_pos_bias else None
 
         pos_bias_mlp_dim = dim // 2
+
         self.pos_bias_mlp = nn.Sequential(
             nn.Linear(2, pos_bias_mlp_dim),
             nn.SiLU(),
             nn.Linear(pos_bias_mlp_dim, pos_bias_mlp_dim),
             nn.SiLU(),
             nn.Linear(pos_bias_mlp_dim, heads)
-        )
+        ) if rel_pos_bias else None
 
         self.codebook_size = codebook_size
         self.num_coarse_quantizers = num_coarse_quantizers
@@ -983,75 +976,78 @@ class FineTransformer(nn.Module):
 
         # an engineered attention bias so coarse and fine sequences attend to each other better
 
-        max_seq_len = max(coarse_seq_length, fine_seq_length)
+        attn_bias = None
 
-        coarse_pos = torch.arange(coarse_seq_length, device = device)
-        fine_pos = torch.arange(fine_seq_length, device = device)
+        if exists(self.pos_bias_mlp):
+            max_seq_len = max(coarse_seq_length, fine_seq_length)
 
-        coarse_pos = repeat(coarse_pos, 'n -> (n q)', q = self.num_coarse_quantizers)[:coarse_length]
-        fine_pos = repeat(fine_pos, 'n -> (n q)', q = self.num_fine_quantizers)[:fine_length]
+            coarse_pos = torch.arange(coarse_seq_length, device = device)
+            fine_pos = torch.arange(fine_seq_length, device = device)
 
-        coarse_pos = F.pad(coarse_pos, (1, 0), value = -1)
-        fine_pos = F.pad(fine_pos, (1, 0), value = -1)
+            coarse_pos = repeat(coarse_pos, 'n -> (n q)', q = self.num_coarse_quantizers)[:coarse_length]
+            fine_pos = repeat(fine_pos, 'n -> (n q)', q = self.num_fine_quantizers)[:fine_length]
 
-        seq_positions = torch.cat((coarse_pos, fine_pos), dim = -1)
+            coarse_pos = F.pad(coarse_pos, (1, 0), value = -1)
+            fine_pos = F.pad(fine_pos, (1, 0), value = -1)
 
-        coarse_offsets = F.pad(coarse_offsets, (1, 0), value = 0)
-        fine_offsets = fine_offsets + self.num_coarse_quantizers
-        fine_offsets = F.pad(fine_offsets, (1, 0), value = 0)
+            seq_positions = torch.cat((coarse_pos, fine_pos), dim = -1)
 
-        seq_offsets = torch.cat((coarse_offsets, fine_offsets), dim = -1)
+            coarse_offsets = F.pad(coarse_offsets, (1, 0), value = 0)
+            fine_offsets = fine_offsets + self.num_coarse_quantizers
+            fine_offsets = F.pad(fine_offsets, (1, 0), value = 0)
 
-        pos_mlp_input = torch.stack((seq_positions.clamp(min = 0), seq_offsets), dim = -1)
+            seq_offsets = torch.cat((coarse_offsets, fine_offsets), dim = -1)
 
-        num_offsets = self.num_fine_quantizers + self.num_coarse_quantizers
+            pos_mlp_input = torch.stack((seq_positions.clamp(min = 0), seq_offsets), dim = -1)
 
-        # relative positions are always (2 * N - 1), where N is the length of the dimension
+            num_offsets = self.num_fine_quantizers + self.num_coarse_quantizers
 
-        rel_seq_len, rel_offsets = map(lambda n: 2 * n - 1, (max_seq_len, num_offsets))
+            # relative positions are always (2 * N - 1), where N is the length of the dimension
 
-        # get all relative distances
+            rel_seq_len, rel_offsets = map(lambda n: 2 * n - 1, (max_seq_len, num_offsets))
 
-        rel_dist = (rearrange(pos_mlp_input, 'i c -> i 1 c') - rearrange(pos_mlp_input, 'j c -> 1 j c'))
+            # get all relative distances
 
-        # get all possible relative distances for the attention bias to be computed from the mlp
-        # which would be - (2 * N - 1) * (2 * Q - 1) - where N = sequence length and Q = total quantizers
+            rel_dist = (rearrange(pos_mlp_input, 'i c -> i 1 c') - rearrange(pos_mlp_input, 'j c -> 1 j c'))
 
-        rel_seq_len_range = repeat(torch.arange(rel_seq_len, device = device), 'n -> (n q)', q = rel_offsets)
-        rel_offset_range = repeat(torch.arange(rel_offsets, device = device), 'q -> (n q)', n = rel_seq_len)
+            # get all possible relative distances for the attention bias to be computed from the mlp
+            # which would be - (2 * N - 1) * (2 * Q - 1) - where N = sequence length and Q = total quantizers
 
-        mlp_inputs = torch.stack((rel_seq_len_range, rel_offset_range), dim = -1)
+            rel_seq_len_range = repeat(torch.arange(rel_seq_len, device = device), 'n -> (n q)', q = rel_offsets)
+            rel_offset_range = repeat(torch.arange(rel_offsets, device = device), 'q -> (n q)', n = rel_seq_len)
 
-        # implicitly parameterized relative distances, by sequence and quantizer positions
+            mlp_inputs = torch.stack((rel_seq_len_range, rel_offset_range), dim = -1)
 
-        attn_bias = self.pos_bias_mlp(mlp_inputs.float())
+            # implicitly parameterized relative distances, by sequence and quantizer positions
 
-        # translate coordinates of (rel_seq_pos, rel_quantizer_offset) -> positive index to select from attn bias
+            attn_bias = self.pos_bias_mlp(mlp_inputs.float())
 
-        rel_dist_seq_pos, rel_dist_seq_offset = rel_dist.unbind(dim = -1)
+            # translate coordinates of (rel_seq_pos, rel_quantizer_offset) -> positive index to select from attn bias
 
-        rel_dist_seq_pos += max_seq_len - 1
-        rel_dist_seq_offset += num_offsets - 1
+            rel_dist_seq_pos, rel_dist_seq_offset = rel_dist.unbind(dim = -1)
 
-        rel_dist_indices = rel_dist_seq_pos * rel_offsets + rel_dist_seq_offset
+            rel_dist_seq_pos += max_seq_len - 1
+            rel_dist_seq_offset += num_offsets - 1
 
-        # select the relative positional attention bias outputted by the MLP
-        # savings go from (N * Q) ^ 2 -> ~ (4 * N * Q)
+            rel_dist_indices = rel_dist_seq_pos * rel_offsets + rel_dist_seq_offset
 
-        attn_bias = attn_bias[rel_dist_indices]
+            # select the relative positional attention bias outputted by the MLP
+            # savings go from (N * Q) ^ 2 -> ~ (4 * N * Q)
 
-        attn_bias = rearrange(attn_bias, '... h -> h ...')
+            attn_bias = attn_bias[rel_dist_indices]
 
-        # need to make sure start token has a custom positional bias
+            attn_bias = rearrange(attn_bias, '... h -> h ...')
 
-        is_start_token_seq = seq_positions == -1
-        start_token_mask = rearrange(is_start_token_seq, 'i -> i 1') | rearrange(is_start_token_seq, 'j -> 1 j')
+            # need to make sure start token has a custom positional bias
 
-        attn_bias = torch.where(
-            start_token_mask,
-            self.null_pos_bias,
-            attn_bias,
-        )
+            is_start_token_seq = seq_positions == -1
+            start_token_mask = rearrange(is_start_token_seq, 'i -> i 1') | rearrange(is_start_token_seq, 'j -> 1 j')
+
+            attn_bias = torch.where(
+                start_token_mask,
+                self.null_pos_bias,
+                attn_bias,
+            )
 
         # attention
 
@@ -1689,7 +1685,12 @@ class FineTransformerWrapper(nn.Module):
         self_attn_mask = None
 
         if self.mask_prob > 0 and self.training:
-            self_attn_mask = generate_mask_with_prob(self_attn_mask.shape, self.mask_prob, device = self_attn_mask.device)
+            mask_shape = (
+                coarse_token_ids.shape[0],
+                coarse_token_ids.shape[-1] + fine_token_ids.shape[-1] + 2
+            )
+
+            self_attn_mask = generate_mask_with_prob(mask_shape, self.mask_prob, device = self.device)
 
         coarse_logits, fine_logits = self.transformer(
             coarse_token_ids = coarse_token_ids,
