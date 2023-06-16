@@ -1363,7 +1363,7 @@ class CoarseTransformerWrapper(nn.Module):
 
         for time_step in tqdm(range(init_coarse_time_step, max_time_steps), desc = 'generating coarse'):
             for ind in range(self.num_coarse_quantizers):
-                is_last_step = ind == (self.num_coarse_quantizers - 1)
+                just_finished_quantizer_step = (ind == 0 and time_step > 0)
 
                 _, coarse_logits = self.transformer.forward_with_cond_scale(
                     coarse_token_ids = sampled_coarse_token_ids,
@@ -1376,8 +1376,8 @@ class CoarseTransformerWrapper(nn.Module):
 
                 last_coarse_logits = coarse_logits[:, -1]
 
-                if not is_last_step:
-                    last_coarse_logits[:, -1] = float('-inf') # prevent from eos if not last quantizer step, but move this to masking logic within the transformer at some point, for both training and eval
+                if not just_finished_quantizer_step:
+                    last_coarse_logits[:, -1] = float('-inf') # prevent from eos in the middle of a quantizer step
 
                 filtered_logits = top_k(last_coarse_logits, thres = filter_thres)
                 sampled = gumbel_sample(filtered_logits, temperature = temperature, dim = -1)
@@ -1590,7 +1590,7 @@ class FineTransformerWrapper(nn.Module):
 
         for time_step in tqdm(range(init_fine_time_step, max_time_steps), desc = 'generating fine'):
             for ind in range(self.num_fine_quantizers):
-                is_last_step = ind == (self.num_fine_quantizers - 1)
+                just_finished_quantizer_step = (ind == 0 and time_step > 0)
 
                 _, fine_logits = self.transformer.forward_with_cond_scale(
                     coarse_token_ids = coarse_token_ids,
@@ -1602,6 +1602,9 @@ class FineTransformerWrapper(nn.Module):
                 )
 
                 last_fine_logits = fine_logits[:, -1]
+
+                if not just_finished_quantizer_step:
+                    last_fine_logits[:, -1] = float('-inf')  # prevent from eos in the middle of a quantizer step
 
                 filtered_logits = top_k(last_fine_logits, thres = filter_thres)
                 sampled = gumbel_sample(filtered_logits, temperature = temperature, dim = -1)
