@@ -1377,7 +1377,7 @@ class CoarseTransformerWrapper(nn.Module):
                 last_coarse_logits = coarse_logits[:, -1]
 
                 if not just_finished_quantizer_step:
-                    last_coarse_logits[:, -1] = float('-inf') # prevent from eos in the middle of a quantizer step
+                    last_coarse_logits[:, -1] = float('-inf') # prevent from eos in the middle of a time step
 
                 filtered_logits = top_k(last_coarse_logits, thres = filter_thres)
                 sampled = gumbel_sample(filtered_logits, temperature = temperature, dim = -1)
@@ -1604,7 +1604,7 @@ class FineTransformerWrapper(nn.Module):
                 last_fine_logits = fine_logits[:, -1]
 
                 if not just_finished_quantizer_step:
-                    last_fine_logits[:, -1] = float('-inf')  # prevent from eos in the middle of a quantizer step
+                    last_fine_logits[:, -1] = float('-inf')  # prevent from eos in the middle of a time step
 
                 filtered_logits = top_k(last_fine_logits, thres = filter_thres)
                 sampled = gumbel_sample(filtered_logits, temperature = temperature, dim = -1)
