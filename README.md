@@ -36,6 +36,8 @@ In the future, <a href="https://www.youtube.com/watch?v=olNvmUCmY8o">this movie 
 
 - <a href="https://github.com/LWprogramming">LWprogramming</a> for adding Encodec compatibility!
 
+- <a href="https://github.com/LWprogramming">LWprogramming</a> for finding an issue with handling of the EOS token when sampling from the `FineTransformer`!
+
 - <a href="https://github.com/YoungloLee">@YoungloLee</a> for identifying a big bug in the 1d causal convolution for soundstream related to padding not accounting for strides!
 
 - <a href="https://github.com/haydenshively">Hayden</a> for pointing out some discrepancies in the multi-scale discriminator for Soundstream
