@@ -43,7 +43,7 @@ from audiolm_pytorch.utils import AudioConditionerBase
 from audiolm_pytorch.version import __version__
 from packaging import version
 
-from accelerate import Accelerator
+from accelerate import (Accelerator, DistributedType)
 from accelerate.utils import DistributedDataParallelKwargs
 
 # constants
@@ -288,8 +288,11 @@ class SoundStreamTrainer(nn.Module):
         self.results_folder.mkdir(parents = True, exist_ok = True)
 
         # Initialize experiment trackers if an external Accelerator is not passed in
+
         if not accelerator:
             self.accelerator.init_trackers("soundstream", config=hyperparameters)        
+
+        assert self.accelerator.distributed_type != DistributedType.FSDP, 'FSDP not supported for soundstream trainer due to complex-valued stft discriminator'
 
     def set_model_as_ema_model_(self):
         """ this will force the main 'online' model to have same parameters as the exponentially moving averaged model """
