@@ -1330,6 +1330,7 @@ class CoarseTransformerWrapper(nn.Module):
         *,
         semantic_token_ids,
         prime_wave: Optional[Tensor] = None,
+        prime_coarse_token_ids: Optional[Tensor] = None,
         text: Optional[List[str]] = None,
         text_embeds = None,
         max_time_steps = 512,
@@ -1346,7 +1347,11 @@ class CoarseTransformerWrapper(nn.Module):
         # initialize coarse token ids
         # if a prime audio wave was supplied, then start off with appropriate acoustic tokens
 
-        if exists(prime_wave):
+        assert not (exists(prime_wave) and exists(prime_coarse_token_ids)), 'you can either pass in the prime as a raw wave (codec required) or as preprocessed acoustic token ids'
+
+        if exists(prime_coarse_token_ids):
+            coarse_token_ids = prime_coarse_token_ids
+        elif exists(prime_wave):
             assert exists(self.codec)
             with torch.no_grad():
                 self.codec.eval()
@@ -1570,6 +1575,7 @@ class FineTransformerWrapper(nn.Module):
         *,
         coarse_token_ids,
         prime_wave: Optional[Tensor] = None,
+        prime_fine_token_ids: Optional[Tensor] = None,
         text: Optional[List[str]] = None,
         text_embeds = None,
         cond_scale = 3.,
@@ -1597,7 +1603,11 @@ class FineTransformerWrapper(nn.Module):
         # initialize fine token ids
         # if a prime wave was supplied, start off with fine acoustic tokens
 
-        if exists(prime_wave):
+        assert not (exists(prime_wave) and exists(prime_fine_token_ids)), 'you can either pass in the prime as a raw wave (codec required) or as preprocessed acoustic token ids'
+
+        if exists(prime_fine_token_ids):
+            fine_token_ids = prime_fine_token_ids
+        elif exists(prime_wave):
             assert exists(self.codec)
             with torch.no_grad():
                 self.codec.eval()
