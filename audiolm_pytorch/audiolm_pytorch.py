@@ -5,7 +5,7 @@ from beartype.typing import Optional, Union, List
 from beartype import beartype
 
 import torch
-from torch import nn, einsum
+from torch import nn, einsum, Tensor
 from torch.autograd import grad as torch_grad
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
@@ -1329,6 +1329,7 @@ class CoarseTransformerWrapper(nn.Module):
         self,
         *,
         semantic_token_ids,
+        prime_wave: Optional[Tensor] = None,
         text: Optional[List[str]] = None,
         text_embeds = None,
         max_time_steps = 512,
@@ -1342,7 +1343,18 @@ class CoarseTransformerWrapper(nn.Module):
 
         semantic_token_ids = semantic_token_ids.to(device)
 
-        coarse_token_ids = torch.empty((batch, 0), device = device, dtype = torch.long)
+        # initialize coarse token ids
+        # if a prime audio wave was supplied, then start off with appropriate acoustic tokens
+
+        if exists(prime_wave):
+            assert exists(self.codec)
+            with torch.no_grad():
+                self.codec.eval()
+                _, indices, _ = self.codec(prime_wave, return_encoded = True)
+                coarse_token_ids = indices[..., :self.num_coarse_quantizers]
+                coarse_token_ids = rearrange(coarse_token_ids, 'b ... -> b (...)')
+        else:
+            coarse_token_ids = torch.empty((batch, 0), device = device, dtype = torch.long)
 
         # derive text embeddings if needed
 
@@ -1430,12 +1442,14 @@ class CoarseTransformerWrapper(nn.Module):
             with torch.no_grad():
                 self.codec.eval()
                 _, indices, _ = self.codec(raw_wave_for_codec, return_encoded = True)
-                batch = raw_wave_for_codec.shape[0]
-                num_timesteps = raw_wave_for_codec.shape[1]
+
+                batch, num_timesteps = raw_wave_for_codec.shape
                 num_frames = int(num_timesteps / self.codec.seq_len_multiple_of)
+
                 assert indices.shape[0] == batch and indices.shape[1] == num_frames, \
                     f'Expected indices to have shape (batch, num_frames, num_coarse_quantizers + num_fine_quantizers), but got {indices.shape}'
-                coarse_token_ids, _ = indices[..., :self.num_coarse_quantizers], indices[..., self.num_coarse_quantizers:]
+
+                coarse_token_ids = indices[..., :self.num_coarse_quantizers]
 
         semantic_token_ids = rearrange(semantic_token_ids, 'b ... -> b (...)')
         coarse_token_ids = rearrange(coarse_token_ids, 'b ... -> b (...)')
@@ -1555,6 +1569,7 @@ class FineTransformerWrapper(nn.Module):
         self,
         *,
         coarse_token_ids,
+        prime_wave: Optional[Tensor] = None,
         text: Optional[List[str]] = None,
         text_embeds = None,
         cond_scale = 3.,
@@ -1579,9 +1594,21 @@ class FineTransformerWrapper(nn.Module):
             with torch.no_grad():
                 text_embeds = self.transformer.embed_text(text, output_device = device)
 
-        # initialize
+        # initialize fine token ids
+        # if a prime wave was supplied, start off with fine acoustic tokens
 
-        fine_token_ids = torch.empty((batch, 0), device = device, dtype = torch.long)
+        if exists(prime_wave):
+            assert exists(self.codec)
+            with torch.no_grad():
+                self.codec.eval()
+                _, token_ids, _ = self.codec(prime_wave, return_encoded = True)
+
+            fine_token_ids = token_ids[..., self.num_coarse_quantizers:]
+            fine_token_ids = rearrange(fine_token_ids, 'b ... -> b (...)')
+        else:
+            fine_token_ids = torch.empty((batch, 0), device = device, dtype = torch.long)
+
+        # calculate number of sampling steps
 
         init_fine_time_step = fine_token_ids.shape[-1]
         max_time_steps = coarse_token_ids.shape[1] // self.num_coarse_quantizers
@@ -1664,9 +1691,10 @@ class FineTransformerWrapper(nn.Module):
             with torch.no_grad():
                 self.codec.eval()
                 _, token_ids, _ = self.codec(raw_wave, return_encoded = True)
-                batch = raw_wave.shape[0]
-                num_timesteps = raw_wave.shape[1]
+
+                batch, num_timesteps = raw_wave.shape
                 num_frames = int(num_timesteps / self.codec.seq_len_multiple_of)
+
                 assert token_ids.shape == torch.Size((batch, num_frames, self.num_coarse_quantizers + self.num_fine_quantizers)), \
                     f'Expected token ids to have shape (batch, num_frames, num_coarse_quantizers + num_fine_quantizers), but got {token_ids.shape}'
 
@@ -1774,7 +1802,7 @@ class AudioLM(nn.Module):
 
         self.coarse = CoarseTransformerWrapper(
             wav2vec = wav2vec,
-            codec= codec,
+            codec = codec,
             transformer = coarse_transformer,
             audio_conditioner = audio_conditioner,
             unique_consecutive = unique_consecutive
@@ -1797,7 +1825,7 @@ class AudioLM(nn.Module):
         *,
         batch_size = 1,
         text: Optional[List[str]] = None,
-        text_embeds: Optional[torch.Tensor] = None,
+        text_embeds: Optional[Tensor] = None,
         prime_wave = None,
         max_length = 2048,
         return_coarse_generated_wave = False,
@@ -1822,6 +1850,7 @@ class AudioLM(nn.Module):
         coarse_token_ids_or_recon_wave = self.coarse.generate(
             text_embeds = text_embeds if self.coarse_has_condition else None,
             semantic_token_ids = semantic_token_ids,
+            prime_wave = prime_wave,
             reconstruct_wave = return_coarse_generated_wave
         )
 
@@ -1831,6 +1860,7 @@ class AudioLM(nn.Module):
         generated_wave = self.fine.generate(
             text_embeds = text_embeds if self.fine_has_condition else None,
             coarse_token_ids = coarse_token_ids_or_recon_wave,
+            prime_wave = prime_wave,
             reconstruct_wave = True,
             mask_out_generated_fine_tokens = mask_out_generated_fine_tokens
         )
