@@ -1375,7 +1375,7 @@ class CoarseTransformerWrapper(nn.Module):
 
         # initialize
 
-        init_coarse_time_step = coarse_token_ids.shape[-1]
+        init_coarse_time_step = 0
         sampled_coarse_token_ids = coarse_token_ids.clone()
 
         for time_step in tqdm(range(init_coarse_time_step, max_time_steps), desc = 'generating coarse'):
@@ -1620,7 +1620,7 @@ class FineTransformerWrapper(nn.Module):
 
         # calculate number of sampling steps
 
-        init_fine_time_step = fine_token_ids.shape[-1]
+        init_fine_time_step = fine_token_ids.shape[-1] // self.num_fine_quantizers
         max_time_steps = coarse_token_ids.shape[1] // self.num_coarse_quantizers
 
         sampled_fine_token_ids = fine_token_ids.clone()
