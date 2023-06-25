@@ -64,6 +64,11 @@ class HubertWithKmeans(nn.Module):
     def codebook_size(self):
         return self.kmeans.n_clusters
 
+    @property
+    def downsample_factor(self):
+        # todo: double check
+        return 320
+
     @torch.no_grad()
     def forward(
         self,

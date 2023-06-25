@@ -51,6 +51,11 @@ class FairseqVQWav2Vec(nn.Module):
         return self.model.vector_quantizer.groups
 
     @property
+    def downsample_factor(self):
+        # todo: double check architecture
+        return 80
+
+    @property
     def codebook_size(self):
         return self.model.vector_quantizer.embedding.shape[0]
 

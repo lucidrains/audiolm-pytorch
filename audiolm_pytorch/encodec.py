@@ -67,6 +67,10 @@ class EncodecWrapper(nn.Module):
     def seq_len_multiple_of(self):
         return reduce(lambda x, y: x * y, self.strides)
 
+    @property
+    def downsample_factor(self):
+        return self.seq_len_multiple_of
+
     def forward(
         self,
         x,

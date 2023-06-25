@@ -683,6 +683,10 @@ class SoundStream(nn.Module):
     def seq_len_multiple_of(self):
         return functools.reduce(lambda x, y: x * y, self.strides)
 
+    @property
+    def downsample_factor(self):
+        return self.seq_len_multiple_of
+
     def process_input(
         self,
         x,
