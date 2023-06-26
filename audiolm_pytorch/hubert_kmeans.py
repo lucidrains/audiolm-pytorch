@@ -97,8 +97,9 @@ class HubertWithKmeans(nn.Module):
 
         codebook_indices = torch.from_numpy(codebook_indices).to(device).long()
 
+        codebook_indices, = unpack(codebook_indices, packed_shape, '*')
+
         if flatten:
             return codebook_indices
 
-        codebook_indices, = unpack(codebook_indices, packed_shape, '*')
-        return codebook_indices
+        return rearrange(codebook_indices, 'b ... -> b (...)')
