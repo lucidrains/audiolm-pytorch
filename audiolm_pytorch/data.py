@@ -98,9 +98,6 @@ class SoundDataset(Dataset):
 
             data = rearrange(data, '1 ... -> ...')
 
-            if exists(max_length):
-                data = data[:max_length]
-
             if exists(seq_len_multiple_of):
                 data = curtail_to_multiple(data, seq_len_multiple_of)
 
