@@ -88,18 +88,15 @@ class SoundDataset(Dataset):
 
             # pad or curtail
 
-            if audio_length > max_length:
-                max_start = audio_length - max_length
-                start = torch.randint(0, max_start, (1, ))
-                data = data[:, start:start + max_length]
-
-            else:
-                data = F.pad(data, (0, max_length - audio_length), 'constant')
+            if exists(max_length):
+                if audio_length > max_length:
+                    max_start = audio_length - max_length
+                    start = torch.randint(0, max_start, (1, ))
+                    data = data[:, start:start + max_length]
+                else:
+                    data = F.pad(data, (0, max_length - audio_length), 'constant')
 
             data = rearrange(data, '1 ... -> ...')
-
-            if exists(max_length):
-                data = data[:max_length]
 
             if exists(seq_len_multiple_of):
                 data = curtail_to_multiple(data, seq_len_multiple_of)
