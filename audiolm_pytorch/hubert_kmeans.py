@@ -1,8 +1,8 @@
 from pathlib import Path
 
 import torch
-from torch import nn
-from einops import rearrange, pack, unpack
+from torch import nn, einsum
+from einops import rearrange, repeat, pack, unpack
 
 import joblib
 
@@ -54,7 +54,13 @@ class HubertWithKmeans(nn.Module):
         self.model.eval()
 
         kmeans = joblib.load(kmeans_path)
+
         self.kmeans = kmeans
+
+        self.register_buffer(
+            'cluster_centers',
+            torch.from_numpy(kmeans.cluster_centers_)
+        )
 
     @property
     def groups(self):
@@ -76,7 +82,7 @@ class HubertWithKmeans(nn.Module):
         flatten = True,
         input_sample_hz = None
     ):
-        device = wav_input.device
+        batch, device = wav_input.shape[0], wav_input.device
 
         if exists(input_sample_hz):
             wav_input = resample(wav_input, input_sample_hz, self.target_sample_hz)
@@ -89,17 +95,13 @@ class HubertWithKmeans(nn.Module):
             features_only = True,
             mask = False,  # thanks to @maitycyrus for noticing that mask is defaulted to True in the fairseq code
             output_layer = self.output_layer
-        )
+        )['x']
 
-        embed, packed_shape = pack([embed['x']], '* d')
-
-        codebook_indices = self.kmeans.predict(embed.cpu().detach().numpy())
-
-        codebook_indices = torch.from_numpy(codebook_indices).to(device).long()
-
-        codebook_indices, = unpack(codebook_indices, packed_shape, '*')
+        batched_cluster_centers = repeat(self.cluster_centers, 'c d -> b c d', b = embed.shape[0])
+        dists = -torch.cdist(embed, batched_cluster_centers, p = 2)
+        clusters = dists.argmax(dim = -1)
 
         if flatten:
-            return codebook_indices
+            return clusters
 
-        return rearrange(codebook_indices, 'b ... -> b (...)')
+        return rearrange(clusters, 'b ... -> b (...)')
