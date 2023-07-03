@@ -93,7 +93,7 @@ def t5_encode_text(
 
     t5.eval()
 
-    with torch.no_grad():
+    with torch.inference_mode():
         output = t5(input_ids = input_ids, attention_mask = attn_mask)
         encoded_text = output.last_hidden_state.detach()
 

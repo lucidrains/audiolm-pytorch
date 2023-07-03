@@ -75,7 +75,7 @@ class HubertWithKmeans(nn.Module):
         # todo: double check
         return 320
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def forward(
         self,
         wav_input,
