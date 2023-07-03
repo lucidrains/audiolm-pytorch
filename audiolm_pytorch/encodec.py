@@ -89,7 +89,7 @@ class EncodecWrapper(nn.Module):
         wav = rearrange(x, f'b t -> b {self.model.channels} t')
 
         # Extract discrete codes from EnCodec
-        with torch.no_grad():
+        with torch.inference_mode():
             encoded_frames = self.model.encode(wav)
         # encoded_frames is a list of (frame, scale) tuples. Scale is a scalar but we don't use it. Frame is a tensor
         # of shape [batch, num_quantizers, num_samples_per_frame]. We want to concatenate the frames to get all the

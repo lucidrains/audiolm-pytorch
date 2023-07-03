@@ -59,7 +59,7 @@ class FairseqVQWav2Vec(nn.Module):
     def codebook_size(self):
         return self.model.vector_quantizer.embedding.shape[0]
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def forward(
         self,
         wav_input,
