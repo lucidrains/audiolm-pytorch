@@ -36,6 +36,10 @@ class HubertWithKmeans(nn.Module):
         output_layer = 9
     ):
         super().__init__()
+
+        import sklearn
+        assert sklearn.__version__ == '0.24.0', 'scikit-learn needs to be exactly 0.24.0 - please install the correct version by running `pip install scikit-learn==0.24.0`'
+
         self.target_sample_hz = target_sample_hz
         self.seq_len_multiple_of = seq_len_multiple_of
         self.output_layer = output_layer
