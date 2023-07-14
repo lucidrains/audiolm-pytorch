@@ -750,6 +750,8 @@ class SemanticTransformerTrainer(nn.Module):
 
         # sample results every so often
 
+        self.accelerator.wait_for_everyone()
+
         if self.is_main and not (steps % self.save_results_every):
             data_kwargs = self.data_tuple_to_kwargs(next(self.valid_dl_iter))
 
@@ -998,6 +1000,8 @@ class CoarseTransformerTrainer(nn.Module):
         self.accelerator.log({"train_loss": logs['loss']}, step=steps)
 
         # sample results every so often
+
+        self.accelerator.wait_for_everyone()
 
         if self.is_main and not (steps % self.save_results_every):
             data_kwargs = dict(zip(self.ds_fields, next(self.valid_dl_iter)))
@@ -1248,6 +1252,8 @@ class FineTransformerTrainer(nn.Module):
         self.accelerator.log({"train_loss": logs['loss']}, step=steps)
 
         # sample results every so often
+
+        self.accelerator.wait_for_everyone()
 
         if self.is_main and not (steps % self.save_results_every):
             data_kwargs = self.data_tuple_to_kwargs(next(self.valid_dl_iter))
