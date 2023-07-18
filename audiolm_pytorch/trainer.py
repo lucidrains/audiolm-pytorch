@@ -50,6 +50,15 @@ from accelerate.utils import DistributedDataParallelKwargs
 
 DEFAULT_SAMPLE_RATE = 16000
 
+# make sure only one trainer is instantiated
+
+ONE_TRAINER_INSTANTIATED = False
+
+def check_one_trainer():
+    global ONE_TRAINER_INSTANTIATED
+    assert not ONE_TRAINER_INSTANTIATED, 'only one Trainer can be instantiated at a time for training'
+    ONE_TRAINER_INSTANTIATED = True
+
 # for automatically routing data emitted from a dataset to keywords of the transformer wrappers
 
 DATASET_FIELD_TYPE_CONFIG = dict(
@@ -162,6 +171,7 @@ class SoundStreamTrainer(nn.Module):
         train/val DataLoader instances.
         """
         super().__init__()
+        check_one_trainer()
 
         if accelerator:
             self.accelerator = accelerator
@@ -566,6 +576,8 @@ class SemanticTransformerTrainer(nn.Module):
         force_clear_prev_results = None
     ):
         super().__init__()
+        check_one_trainer()
+
         self.accelerator = Accelerator(**accelerate_kwargs)
 
         self.wav2vec = wav2vec
@@ -812,6 +824,8 @@ class CoarseTransformerTrainer(nn.Module):
         force_clear_prev_results = None
     ):
         super().__init__()
+        check_one_trainer()
+
         self.accelerator = Accelerator(**accelerate_kwargs)
 
         self.transformer = transformer
@@ -1066,6 +1080,8 @@ class FineTransformerTrainer(nn.Module):
         force_clear_prev_results = None
     ):
         super().__init__()
+        check_one_trainer()
+
         self.accelerator = Accelerator(**accelerate_kwargs)
 
         self.transformer = transformer
