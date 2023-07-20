@@ -127,7 +127,12 @@ def checkpoint_num_steps(checkpoint_path):
     Filename format assumed to be something like "/path/to/semantic.transformer.20000.pt" which is
     for 20k train steps. Returns 20000 in that case.
     """
-    return int(re.findall(r'\d+', str(checkpoint_path))[-1])
+    results = re.findall(r'\d+', str(checkpoint_path))
+
+    if len(results) == 0:
+        return 0
+
+    return int(results[-1])
 
 # main trainer class
 
@@ -364,7 +369,9 @@ class SoundStreamTrainer(nn.Module):
         for key, _ in self.multiscale_discriminator_iter():
             discr_optim = getattr(self, key)
             discr_optim.load_state_dict(pkg[key])
+
         # + 1 to start from the next step and avoid overwriting the last checkpoint
+
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
 
     def multiscale_discriminator_iter(self):
@@ -694,6 +701,7 @@ class SemanticTransformerTrainer(nn.Module):
         transformer = self.accelerator.unwrap_model(self.transformer)
         transformer.load_state_dict(pkg['model'])
         self.optim.load_state_dict(pkg['optim'])
+
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
 
@@ -948,9 +956,10 @@ class CoarseTransformerTrainer(nn.Module):
             print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
 
         transformer = self.accelerator.unwrap_model(self.transformer)
-        transformer.load_state_dict(pkg['model'])
 
+        transformer.load_state_dict(pkg['model'])
         self.optim.load_state_dict(pkg['optim'])
+
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
 
@@ -1204,7 +1213,6 @@ class FineTransformerTrainer(nn.Module):
         self.optim.load_state_dict(pkg['optim'])
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
-
 
     def print(self, msg):
         self.accelerator.print(msg)
