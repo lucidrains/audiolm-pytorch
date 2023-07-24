@@ -26,6 +26,9 @@ from audiolm_pytorch.utils import AudioConditionerBase
 from audiolm_pytorch.attend import Attend
 
 from tqdm import tqdm
+from pathlib import Path
+from audiolm_pytorch.version import __version__
+from packaging import version
 
 # helper functions
 
@@ -430,6 +433,18 @@ class Transformer(nn.Module):
             x = ff(x) + x
 
         return self.norm(x)
+
+    def load(self, path):
+        # Return pkg so that if this function gets called from within a Trainer function call,
+        # the trainer can also access the package loaded from the checkpoint.
+        path = Path(path)
+        assert path.exists()
+        pkg = torch.load(str(path), map_location = 'cpu')
+        # check version
+        if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
+            print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
+        self.load_state_dict(pkg['model'])
+        return pkg
 
 # the three hierarchical transformers
 
