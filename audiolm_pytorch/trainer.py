@@ -169,6 +169,7 @@ class SoundStreamTrainer(nn.Module):
         accelerator: Accelerator = None,
         accelerate_kwargs: dict = dict(),
         dataloader_drop_last = True,
+        split_batches = False,
         use_lion: bool = False,
         force_clear_prev_results: bool = None  # set to True | False to skip the prompt
     ):
@@ -184,7 +185,12 @@ class SoundStreamTrainer(nn.Module):
             assert len(accelerate_kwargs) == 0
         else:
             kwargs = DistributedDataParallelKwargs(find_unused_parameters = True)
-            self.accelerator = Accelerator(kwargs_handlers = [kwargs], **accelerate_kwargs)
+
+            self.accelerator = Accelerator(
+                kwargs_handlers = [kwargs],
+                split_batches = split_batches,
+                **accelerate_kwargs
+            )
 
         self.soundstream = soundstream
 
@@ -581,12 +587,17 @@ class SemanticTransformerTrainer(nn.Module):
         save_model_every = 1000,
         results_folder = './results',
         accelerate_kwargs: dict = dict(),
+        split_batches = False,
+        drop_last = False,
         force_clear_prev_results = None
     ):
         super().__init__()
         check_one_trainer()
 
-        self.accelerator = Accelerator(**accelerate_kwargs)
+        self.accelerator = Accelerator(
+            split_batches = split_batches,
+            **accelerate_kwargs
+        )
 
         self.wav2vec = wav2vec
         self.transformer = transformer
@@ -645,9 +656,9 @@ class SemanticTransformerTrainer(nn.Module):
 
         # dataloader
 
-        self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True)
+        self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
 
-        self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, shuffle = True)
+        self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
 
         # prepare with accelerator
 
@@ -822,12 +833,17 @@ class CoarseTransformerTrainer(nn.Module):
         save_model_every = 1000,
         results_folder = './results',
         accelerate_kwargs: dict = dict(),
+        split_batches = False,
+        drop_last = False,
         force_clear_prev_results = None
     ):
         super().__init__()
         check_one_trainer()
 
-        self.accelerator = Accelerator(**accelerate_kwargs)
+        self.accelerator = Accelerator(
+            split_batches = split_batches,
+            **accelerate_kwargs
+        )
 
         self.transformer = transformer
         self.codec = codec
@@ -892,9 +908,9 @@ class CoarseTransformerTrainer(nn.Module):
 
         # dataloader
 
-        self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True)
+        self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
 
-        self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, shuffle = True)
+        self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
 
         # prepare with accelerator
 
@@ -1070,12 +1086,17 @@ class FineTransformerTrainer(nn.Module):
         save_model_every = 1000,
         results_folder = './results',
         accelerate_kwargs: dict = dict(),
+        split_batches = False,
+        drop_last = False,
         force_clear_prev_results = None
     ):
         super().__init__()
         check_one_trainer()
 
-        self.accelerator = Accelerator(**accelerate_kwargs)
+        self.accelerator = Accelerator(
+            split_batches = split_batches,
+            **accelerate_kwargs
+        )
 
         self.transformer = transformer
         self.codec = codec
@@ -1135,9 +1156,9 @@ class FineTransformerTrainer(nn.Module):
 
         # dataloader
 
-        self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True)
+        self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
 
-        self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, shuffle = True)
+        self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
 
         # prepare with accelerator
 
