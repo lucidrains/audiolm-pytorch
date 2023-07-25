@@ -502,13 +502,14 @@ class SemanticTransformer(nn.Module):
     def load(self, path):
         # Return pkg so that if this function gets called from within a Trainer function call,
         # the trainer can also access the package loaded from the checkpoint.
+        device = self.device
         path = Path(path)
         assert path.exists()
         pkg = torch.load(str(path))
         # check version
         if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
             print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
-        self.load_state_dict(pkg['model'])
+        self.load_state_dict(pkg['model'], map_location = device)
         return pkg
 
     def forward_with_cond_scale(
@@ -656,13 +657,14 @@ class CoarseTransformer(nn.Module):
     def load(self, path):
         # Return pkg so that if this function gets called from within a Trainer function call,
         # the trainer can also access the package loaded from the checkpoint.
+        device = self.device
         path = Path(path)
         assert path.exists()
         pkg = torch.load(str(path))
         # check version
         if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
             print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
-        self.load_state_dict(pkg['model'])
+        self.load_state_dict(pkg['model'], map_location = device)
         return pkg
 
     def forward_with_cond_scale(
@@ -898,14 +900,16 @@ class FineTransformer(nn.Module):
     def load(self, path):
         # Return pkg so that if this function gets called from within a Trainer function call,
         # the trainer can also access the package loaded from the checkpoint.
+        device = self.device
         path = Path(path)
         assert path.exists()
         pkg = torch.load(str(path))
         # check version
         if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
             print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
-        self.load_state_dict(pkg['model'])
+        self.load_state_dict(pkg['model'], map_location = device)
         return pkg
+
 
     def forward_with_cond_scale(
         self,
