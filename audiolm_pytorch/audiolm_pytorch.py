@@ -505,11 +505,11 @@ class SemanticTransformer(nn.Module):
         device = self.device
         path = Path(path)
         assert path.exists()
-        pkg = torch.load(str(path))
+        pkg = torch.load(str(path), map_location = device)
         # check version
         if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
             print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
-        self.load_state_dict(pkg['model'], map_location = device)
+        self.load_state_dict(pkg['model'])
         return pkg
 
     def forward_with_cond_scale(
@@ -660,11 +660,11 @@ class CoarseTransformer(nn.Module):
         device = self.device
         path = Path(path)
         assert path.exists()
-        pkg = torch.load(str(path))
+        pkg = torch.load(str(path), map_location = device)
         # check version
         if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
             print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
-        self.load_state_dict(pkg['model'], map_location = device)
+        self.load_state_dict(pkg['model'])
         return pkg
 
     def forward_with_cond_scale(
@@ -903,11 +903,11 @@ class FineTransformer(nn.Module):
         device = self.device
         path = Path(path)
         assert path.exists()
-        pkg = torch.load(str(path))
+        pkg = torch.load(str(path), map_location = device)
         # check version
         if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
             print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
-        self.load_state_dict(pkg['model'], map_location = device)
+        self.load_state_dict(pkg['model'])
         return pkg
 
 
