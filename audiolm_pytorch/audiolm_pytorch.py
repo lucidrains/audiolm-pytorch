@@ -1165,6 +1165,7 @@ class SemanticTransformerWrapper(nn.Module):
         super().__init__()
         self.wav2vec = wav2vec
         self.transformer = transformer
+        self.to(transformer.device)
         self.audio_conditioner = audio_conditioner
 
         assert not (exists(audio_conditioner) and not transformer.has_condition), 'if conditioning on audio embeddings from mulan, transformer has_condition must be set to True'
@@ -1346,6 +1347,7 @@ class CoarseTransformerWrapper(nn.Module):
         self.wav2vec = wav2vec
 
         self.transformer = transformer
+        self.to(transformer.device)
         self.audio_conditioner = audio_conditioner
 
         assert not (exists(audio_conditioner) and not transformer.has_condition), 'if conditioning on audio embeddings from mulan, transformer has_condition must be set to True'
@@ -1587,6 +1589,7 @@ class FineTransformerWrapper(nn.Module):
         self.codec = codec
 
         self.transformer = transformer
+        self.to(transformer.device)
         self.audio_conditioner = audio_conditioner
 
         assert not (exists(audio_conditioner) and not transformer.has_condition), 'if conditioning on audio embeddings from mulan, transformer has_condition must be set to True'
