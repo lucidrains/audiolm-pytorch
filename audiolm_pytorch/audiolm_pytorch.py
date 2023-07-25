@@ -26,6 +26,9 @@ from audiolm_pytorch.utils import AudioConditionerBase
 from audiolm_pytorch.attend import Attend
 
 from tqdm import tqdm
+from pathlib import Path
+from audiolm_pytorch.version import __version__
+from packaging import version
 
 # helper functions
 
@@ -496,6 +499,19 @@ class SemanticTransformer(nn.Module):
     def device(self):
         return next(self.parameters()).device
 
+    def load(self, path):
+        # Return pkg so that if this function gets called from within a Trainer function call,
+        # the trainer can also access the package loaded from the checkpoint.
+        device = self.device
+        path = Path(path)
+        assert path.exists()
+        pkg = torch.load(str(path), map_location = device)
+        # check version
+        if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
+            print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
+        self.load_state_dict(pkg['model'])
+        return pkg
+
     def forward_with_cond_scale(
         self,
         *args,
@@ -637,6 +653,19 @@ class CoarseTransformer(nn.Module):
     @property
     def device(self):
         return next(self.parameters()).device
+
+    def load(self, path):
+        # Return pkg so that if this function gets called from within a Trainer function call,
+        # the trainer can also access the package loaded from the checkpoint.
+        device = self.device
+        path = Path(path)
+        assert path.exists()
+        pkg = torch.load(str(path), map_location = device)
+        # check version
+        if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
+            print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
+        self.load_state_dict(pkg['model'])
+        return pkg
 
     def forward_with_cond_scale(
         self,
@@ -867,6 +896,20 @@ class FineTransformer(nn.Module):
     @property
     def device(self):
         return next(self.parameters()).device
+
+    def load(self, path):
+        # Return pkg so that if this function gets called from within a Trainer function call,
+        # the trainer can also access the package loaded from the checkpoint.
+        device = self.device
+        path = Path(path)
+        assert path.exists()
+        pkg = torch.load(str(path), map_location = device)
+        # check version
+        if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
+            print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
+        self.load_state_dict(pkg['model'])
+        return pkg
+
 
     def forward_with_cond_scale(
         self,
@@ -1122,6 +1165,7 @@ class SemanticTransformerWrapper(nn.Module):
         super().__init__()
         self.wav2vec = wav2vec
         self.transformer = transformer
+        self.to(transformer.device)
         self.audio_conditioner = audio_conditioner
 
         assert not (exists(audio_conditioner) and not transformer.has_condition), 'if conditioning on audio embeddings from mulan, transformer has_condition must be set to True'
@@ -1303,6 +1347,7 @@ class CoarseTransformerWrapper(nn.Module):
         self.wav2vec = wav2vec
 
         self.transformer = transformer
+        self.to(transformer.device)
         self.audio_conditioner = audio_conditioner
 
         assert not (exists(audio_conditioner) and not transformer.has_condition), 'if conditioning on audio embeddings from mulan, transformer has_condition must be set to True'
@@ -1544,6 +1589,7 @@ class FineTransformerWrapper(nn.Module):
         self.codec = codec
 
         self.transformer = transformer
+        self.to(transformer.device)
         self.audio_conditioner = audio_conditioner
 
         assert not (exists(audio_conditioner) and not transformer.has_condition), 'if conditioning on audio embeddings from mulan, transformer has_condition must be set to True'

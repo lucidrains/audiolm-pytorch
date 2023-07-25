@@ -689,17 +689,9 @@ class SemanticTransformerTrainer(nn.Module):
         torch.save(pkg, path)
 
     def load(self, path):
-        path = Path(path)
-        assert path.exists()
-        pkg = torch.load(str(path), map_location = 'cpu')
-
-        # check version
-
-        if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
-            print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
-
         transformer = self.accelerator.unwrap_model(self.transformer)
-        transformer.load_state_dict(pkg['model'])
+        pkg = transformer.load(path)
+        # trainer-specific things
         self.optim.load_state_dict(pkg['optim'])
 
         # + 1 to start from the next step and avoid overwriting the last checkpoint
@@ -946,18 +938,9 @@ class CoarseTransformerTrainer(nn.Module):
         torch.save(pkg, path)
 
     def load(self, path):
-        path = Path(path)
-        assert path.exists()
-        pkg = torch.load(str(path), map_location = 'cpu')
-
-        # check version
-
-        if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
-            print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
-
         transformer = self.accelerator.unwrap_model(self.transformer)
-
-        transformer.load_state_dict(pkg['model'])
+        pkg = transformer.load(path)
+        # trainer-specific things
         self.optim.load_state_dict(pkg['optim'])
 
         # + 1 to start from the next step and avoid overwriting the last checkpoint
@@ -1198,19 +1181,11 @@ class FineTransformerTrainer(nn.Module):
         torch.save(pkg, path)
 
     def load(self, path):
-        path = Path(path)
-        assert path.exists()
-        pkg = torch.load(str(path), map_location = 'cpu')
-
-        # check version
-
-        if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
-            print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
-
         transformer = self.accelerator.unwrap_model(self.transformer)
-        transformer.load_state_dict(pkg['model'])
-
+        pkg = transformer.load(path)
+        # trainer-specific things
         self.optim.load_state_dict(pkg['optim'])
+
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
 
