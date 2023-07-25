@@ -168,6 +168,7 @@ class SoundStreamTrainer(nn.Module):
         dl_num_workers: int = 0,
         accelerator: Accelerator = None,
         accelerate_kwargs: dict = dict(),
+        dataloader_drop_last = True,
         use_lion: bool = False,
         force_clear_prev_results: bool = None  # set to True | False to skip the prompt
     ):
@@ -259,9 +260,9 @@ class SoundStreamTrainer(nn.Module):
 
             # dataloader
 
-            self.dl = get_dataloader(self.ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True)
+            self.dl = get_dataloader(self.ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True, drop_last = dataloader_drop_last)
 
-            self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True)
+            self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True, drop_last = dataloader_drop_last)
 
         # prepare with accelerator
 
