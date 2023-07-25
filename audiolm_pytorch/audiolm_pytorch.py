@@ -504,7 +504,7 @@ class SemanticTransformer(nn.Module):
         # the trainer can also access the package loaded from the checkpoint.
         path = Path(path)
         assert path.exists()
-        pkg = torch.load(str(path), map_location = 'cpu')
+        pkg = torch.load(str(path))
         # check version
         if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
             print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
@@ -658,7 +658,7 @@ class CoarseTransformer(nn.Module):
         # the trainer can also access the package loaded from the checkpoint.
         path = Path(path)
         assert path.exists()
-        pkg = torch.load(str(path), map_location = 'cpu')
+        pkg = torch.load(str(path))
         # check version
         if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
             print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
@@ -900,7 +900,7 @@ class FineTransformer(nn.Module):
         # the trainer can also access the package loaded from the checkpoint.
         path = Path(path)
         assert path.exists()
-        pkg = torch.load(str(path), map_location = 'cpu')
+        pkg = torch.load(str(path))
         # check version
         if 'version' in pkg and version.parse(pkg['version']) < version.parse(__version__):
             print(f'model was trained on older version {pkg["version"]} of audiolm-pytorch')
