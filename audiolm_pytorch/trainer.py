@@ -264,6 +264,9 @@ class SoundStreamTrainer(nn.Module):
                 self.valid_ds = self.ds
                 self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
 
+            assert len(self.ds) >= batch_size, 'dataset must have sufficient samples for training'
+            assert len(self.valid_ds) >= batch_size, f'validation dataset must have sufficient number of samples (currently {len(self.valid_ds)}) for training'
+
             # dataloader
 
             self.dl = get_dataloader(self.ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True, drop_last = dataloader_drop_last)
@@ -654,6 +657,9 @@ class SemanticTransformerTrainer(nn.Module):
             self.valid_ds = self.ds
             self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
 
+        assert len(self.ds) >= batch_size, 'dataset must have sufficient samples for training'
+        assert len(self.valid_ds) >= batch_size, f'validation dataset must have sufficient number of samples (currently {len(self.valid_ds)}) for training'
+
         # dataloader
 
         self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
@@ -906,6 +912,9 @@ class CoarseTransformerTrainer(nn.Module):
             self.valid_ds = self.ds
             self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
 
+        assert len(self.ds) >= batch_size, 'dataset must have sufficient samples for training'
+        assert len(self.valid_ds) >= batch_size, f'validation dataset must have sufficient number of samples (currently {len(self.valid_ds)}) for training'
+
         # dataloader
 
         self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
@@ -1153,6 +1162,9 @@ class FineTransformerTrainer(nn.Module):
         else:
             self.valid_ds = self.ds
             self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
+
+        assert len(self.ds) >= batch_size, 'dataset must have sufficient samples for training'
+        assert len(self.valid_ds) >= batch_size, f'validation dataset must have sufficient number of samples (currently {len(self.valid_ds)}) for training'
 
         # dataloader
 
