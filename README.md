@@ -342,10 +342,10 @@ $ accelerate launch train.py
 - [x] allow for specialized relative positional embeddings in fine transformer based on absolute matching positions of quantizers between coarse and fine
 - [x] allow for grouped residual vq in soundstream (use `GroupedResidualVQ` from vector-quantize-pytorch lib), from <a href="https://arxiv.org/abs/2305.02765">hifi-codec</a>
 - [x] add flash attention with <a href="https://arxiv.org/abs/2305.19466">NoPE</a>
+- [x] accept prime wave in `AudioLM` as a path to an audio file, and auto resample for semantic vs acoustic
 
 - [ ] design a hierarchical coarse and fine transformer
 - [ ] investigate <a href="https://openreview.net/forum?id=H-VlwsYvVi">spec decoding</a>, first test in x-transformers, then port over if applicable
-- [ ] accept prime wave in `AudioLM` as a path to an audio file, and auto resample for semantic vs acoustic
 
 - [ ] redo the positional embeddings in the presence of groups in residual vq
 - [ ] test with speech synthesis for starters

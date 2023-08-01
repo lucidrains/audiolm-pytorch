@@ -10,6 +10,8 @@ from torch.autograd import grad as torch_grad
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 
+import torchaudio
+
 from einops import rearrange, repeat, reduce
 from einops.layers.torch import Rearrange
 
@@ -1901,6 +1903,7 @@ class AudioLM(nn.Module):
         text_embeds: Optional[Tensor] = None,
         prime_wave = None,
         prime_wave_input_sample_hz = None,
+        prime_wave_path = None,
         max_length = 2048,
         return_coarse_generated_wave = False,
         mask_out_generated_fine_tokens = False
@@ -1911,7 +1914,16 @@ class AudioLM(nn.Module):
             if exists(text):
                 text_embeds = self.semantic.embed_text(text)
 
+        assert not (exists(prime_wave) and exists(prime_wave_path)), 'prompt audio must be given as either `prime_wave: Tensor` or `prime_wave_path: str`'
+
         if exists(prime_wave):
+            assert exists(prime_wave_input_sample_hz), 'the input sample frequency for the prompt audio must be given as `prime_wave_input_sample_hz: int`'
+            prime_wave = prime_wave.to(self.device)
+        elif exists(prime_wave_path):
+            prime_wave_path = Path(prime_wave_path)
+            assert exists(prime_wave_path), f'file does not exist at {str(prime_wave_path)}'
+
+            prime_wave, prime_wave_input_sample_hz = torchaudio.load(str(prime_wave_path))
             prime_wave = prime_wave.to(self.device)
 
         semantic_token_ids = self.semantic.generate(
