@@ -345,6 +345,8 @@ $ accelerate launch train.py
 
 - [ ] design a hierarchical coarse and fine transformer
 - [ ] investigate <a href="https://openreview.net/forum?id=H-VlwsYvVi">spec decoding</a>, first test in x-transformers, then port over if applicable
+- [ ] accept prime wave in `AudioLM` as a path to an audio file, and auto resample for semantic vs acoustic
+
 - [ ] redo the positional embeddings in the presence of groups in residual vq
 - [ ] test with speech synthesis for starters
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
