@@ -343,6 +343,8 @@ $ accelerate launch train.py
 - [x] allow for grouped residual vq in soundstream (use `GroupedResidualVQ` from vector-quantize-pytorch lib), from <a href="https://arxiv.org/abs/2305.02765">hifi-codec</a>
 - [x] add flash attention with <a href="https://arxiv.org/abs/2305.19466">NoPE</a>
 
+- [ ] design a hierarchical coarse and fine transformer
+- [ ] investigate <a href="https://openreview.net/forum?id=H-VlwsYvVi">spec decoding</a>, first test in x-transformers, then port over if applicable
 - [ ] redo the positional embeddings in the presence of groups in residual vq
 - [ ] test with speech synthesis for starters
 - [ ] cli tool, something like `audiolm generate <wav.file | text>` and save generated wav file to local directory
