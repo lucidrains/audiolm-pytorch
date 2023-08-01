@@ -4,10 +4,15 @@ from einops import rearrange, pack, unpack
 import torch
 from torch import nn
 
+from torchaudio.functional import resample
+
 from vector_quantize_pytorch import ResidualVQ
 
 from encodec import EncodecModel
 from encodec.utils import _linear_overlap_add
+
+def exists(val):
+    return val is not None
 
 class EncodecWrapper(nn.Module):
     """
@@ -74,11 +79,15 @@ class EncodecWrapper(nn.Module):
     def forward(
         self,
         x,
+        input_sample_hz = None,
         return_encoded = False,
         **kwargs
     ):
 
         x, ps = pack([x], '* n')
+
+        if exists(input_sample_hz):
+            x = resample(x, input_sample_hz, self.target_sample_hz)
 
         # kwargs for stuff like return_encoded=True, which SoundStream uses but Encodec doesn't
         assert not self.model.training, "Encodec is pretrained and should never be called outside eval mode."
