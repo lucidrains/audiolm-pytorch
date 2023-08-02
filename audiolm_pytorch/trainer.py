@@ -389,7 +389,7 @@ class SoundStreamTrainer(nn.Module):
         # fast-forward the dataloader by num_samples_seen so that we continue training from where we left off
         for i in range(self.num_samples_seen):
             next(self.dl_iter)
-            if i % self.save_results_every == 0:
+            if i % self.valid_every == 0:
                 next(self.valid_dl_iter)
 
     def multiscale_discriminator_iter(self):
@@ -729,7 +729,7 @@ class SemanticTransformerTrainer(nn.Module):
         # fast-forward the dataloader by num_samples_seen so that we continue training from where we left off
         for i in range(self.num_samples_seen):
             next(self.dl_iter)
-            if i % self.save_results_every == 0:
+            if i % self.valid_every == 0:
                 next(self.valid_dl_iter)
 
     def print(self, msg):
@@ -992,7 +992,7 @@ class CoarseTransformerTrainer(nn.Module):
         # fast-forward the dataloader by num_samples_seen so that we continue training from where we left off
         for i in range(self.num_samples_seen):
             next(self.dl_iter)
-            if i % self.save_results_every == 0:
+            if i % self.valid_every == 0:
                 next(self.valid_dl_iter)
 
     def print(self, msg):
@@ -1250,7 +1250,7 @@ class FineTransformerTrainer(nn.Module):
         # fast-forward the dataloader by num_samples_seen so that we continue training from where we left off
         for i in range(self.num_samples_seen):
             next(self.dl_iter)
-            if i % self.save_results_every == 0:
+            if i % self.valid_every == 0:
                 next(self.valid_dl_iter)
 
     def print(self, msg):
