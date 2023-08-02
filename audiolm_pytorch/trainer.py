@@ -383,6 +383,10 @@ class SoundStreamTrainer(nn.Module):
         # + 1 to start from the next step and avoid overwriting the last checkpoint
 
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
+        if self.dl.shuffle:
+            # manually set random seed upon load so that runs are reproducible.
+            # this doesn't work for cases e.g. with data not being shuffled or if the user writes a custom sampler but it works fine for the default config
+            torch.manual_seed(self.steps.item())
 
     def multiscale_discriminator_iter(self):
         for ind, discr in enumerate(self.unwrapped_soundstream.discriminators):
@@ -714,6 +718,10 @@ class SemanticTransformerTrainer(nn.Module):
 
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
+        if self.dl.shuffle:
+            # manually set random seed upon load so that runs are reproducible.
+            # this doesn't work for cases e.g. with data not being shuffled or if the user writes a custom sampler but it works fine for the default config
+            torch.manual_seed(self.steps.item())
 
 
     def print(self, msg):
@@ -971,6 +979,10 @@ class CoarseTransformerTrainer(nn.Module):
 
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
+        if self.dl.shuffle:
+            # manually set random seed upon load so that runs are reproducible.
+            # this doesn't work for cases e.g. with data not being shuffled or if the user writes a custom sampler but it works fine for the default config
+            torch.manual_seed(self.steps.item())
 
 
     def print(self, msg):
@@ -1222,6 +1234,10 @@ class FineTransformerTrainer(nn.Module):
 
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
+        if self.dl.shuffle:
+            # manually set random seed upon load so that runs are reproducible.
+            # this doesn't work for cases e.g. with data not being shuffled or if the user writes a custom sampler but it works fine for the default config
+            torch.manual_seed(self.steps.item())
 
     def print(self, msg):
         self.accelerator.print(msg)
