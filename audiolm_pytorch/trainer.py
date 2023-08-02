@@ -272,7 +272,6 @@ class SoundStreamTrainer(nn.Module):
             self.dl = get_dataloader(self.ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True, drop_last = dataloader_drop_last)
 
             self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True, drop_last = dataloader_drop_last)
-        self.num_samples_seen = 0 # track batch_size * num_steps * grad_accum_every
 
         # prepare with accelerator
 
@@ -331,7 +330,6 @@ class SoundStreamTrainer(nn.Module):
             optim = self.optim.state_dict(),
             config = self.unwrapped_soundstream._configs,
             discr_optim = self.discr_optim.state_dict(),
-            num_samples_seen = self.num_samples_seen,
             version = __version__
         )
 
@@ -385,12 +383,6 @@ class SoundStreamTrainer(nn.Module):
         # + 1 to start from the next step and avoid overwriting the last checkpoint
 
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
-        self.num_samples_seen = pkg['num_samples_seen']
-        # fast-forward the dataloader by num_samples_seen so that we continue training from where we left off
-        for i in range(self.num_samples_seen):
-            next(self.dl_iter)
-            if i % self.valid_every == 0:
-                next(self.valid_dl_iter)
 
     def multiscale_discriminator_iter(self):
         for ind, discr in enumerate(self.unwrapped_soundstream.discriminators):
@@ -436,7 +428,6 @@ class SoundStreamTrainer(nn.Module):
 
         for _ in range(self.grad_accum_every):
             wave, = next(self.dl_iter)
-            self.num_samples_seen += self.batch_size
             wave = wave.to(device)
 
             loss, (recon_loss, multi_spectral_recon_loss, adversarial_loss, feature_loss, all_commitment_loss) = self.soundstream(wave, return_loss_breakdown = True)
@@ -674,7 +665,6 @@ class SemanticTransformerTrainer(nn.Module):
         self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
 
         self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
-        self.num_samples_seen = 0 # track batch_size * num_steps * grad_accum_every
 
         # prepare with accelerator
 
@@ -712,7 +702,6 @@ class SemanticTransformerTrainer(nn.Module):
         pkg = dict(
             model = self.accelerator.get_state_dict(self.transformer),
             optim = self.optim.state_dict(),
-            num_samples_seen = self.num_samples_seen,
             version = __version__
         )
         torch.save(pkg, path)
@@ -725,12 +714,7 @@ class SemanticTransformerTrainer(nn.Module):
 
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
-        self.num_samples_seen = pkg['num_samples_seen']
-        # fast-forward the dataloader by num_samples_seen so that we continue training from where we left off
-        for i in range(self.num_samples_seen):
-            next(self.dl_iter)
-            if i % self.valid_every == 0:
-                next(self.valid_dl_iter)
+
 
     def print(self, msg):
         self.accelerator.print(msg)
@@ -776,7 +760,7 @@ class SemanticTransformerTrainer(nn.Module):
 
         for _ in range(self.grad_accum_every):
             data_kwargs = self.data_tuple_to_kwargs(next(self.dl_iter))
-            self.num_samples_seen += self.batch_size
+
             loss = self.train_wrapper(**data_kwargs, return_loss = True)
 
             self.accelerator.backward(loss / self.grad_accum_every)
@@ -936,7 +920,7 @@ class CoarseTransformerTrainer(nn.Module):
         self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
 
         self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
-        self.num_steps_seen = 0 # track batch_size * num_steps * grad_accum_every
+
         # prepare with accelerator
 
         (
@@ -975,7 +959,6 @@ class CoarseTransformerTrainer(nn.Module):
         pkg = dict(
             model = self.accelerator.get_state_dict(self.transformer),
             optim = self.optim.state_dict(),
-            num_steps_seen = self.num_steps_seen,
             version = __version__
         )
         torch.save(pkg, path)
@@ -988,12 +971,7 @@ class CoarseTransformerTrainer(nn.Module):
 
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
-        self.num_steps_seen = pkg['num_steps_seen']
-        # fast-forward the dataloader by num_samples_seen so that we continue training from where we left off
-        for i in range(self.num_samples_seen):
-            next(self.dl_iter)
-            if i % self.valid_every == 0:
-                next(self.valid_dl_iter)
+
 
     def print(self, msg):
         self.accelerator.print(msg)
@@ -1032,7 +1010,7 @@ class CoarseTransformerTrainer(nn.Module):
 
         for _ in range(self.grad_accum_every):
             data_kwargs = dict(zip(self.ds_fields, next(self.dl_iter)))
-            self.num_steps_seen += self.batch_size
+
             loss = self.train_wrapper(
                 **data_kwargs,
                 return_loss = True
@@ -1193,7 +1171,6 @@ class FineTransformerTrainer(nn.Module):
         self.dl = get_dataloader(self.ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
 
         self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, shuffle = True, drop_last = drop_last)
-        self.num_steps_seen = 0 # track batch_size * num_steps * grad_accum_every
 
         # prepare with accelerator
 
@@ -1233,7 +1210,6 @@ class FineTransformerTrainer(nn.Module):
         pkg = dict(
             model = self.accelerator.get_state_dict(self.transformer),
             optim = self.optim.state_dict(),
-            num_steps_seen = self.num_steps_seen,
             version = __version__
         )
         torch.save(pkg, path)
@@ -1246,12 +1222,6 @@ class FineTransformerTrainer(nn.Module):
 
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
-        self.num_steps_seen = pkg["num_steps_seen"]
-        # fast-forward the dataloader by num_samples_seen so that we continue training from where we left off
-        for i in range(self.num_samples_seen):
-            next(self.dl_iter)
-            if i % self.valid_every == 0:
-                next(self.valid_dl_iter)
 
     def print(self, msg):
         self.accelerator.print(msg)
@@ -1297,7 +1267,6 @@ class FineTransformerTrainer(nn.Module):
 
         for _ in range(self.grad_accum_every):
             data_kwargs = self.data_tuple_to_kwargs(next(self.dl_iter))
-            self.num_steps_seen += self.batch_size
             loss = self.train_wrapper(**data_kwargs, return_loss = True)
 
             self.accelerator.backward(loss / self.grad_accum_every)
