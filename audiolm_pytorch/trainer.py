@@ -341,6 +341,10 @@ class SoundStreamTrainer(nn.Module):
             pkg[key] = discr_optim.state_dict()
 
         torch.save(pkg, path)
+        if self.dl.shuffle:
+            # manually set random seed upon save/load so that runs are reproducible.
+            # this doesn't work for cases e.g. with data not being shuffled or if the user writes a custom sampler but it works fine for the default config
+            torch.manual_seed(self.steps.item())
 
     @property
     def unwrapped_soundstream(self):
@@ -384,7 +388,7 @@ class SoundStreamTrainer(nn.Module):
 
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
         if self.dl.shuffle:
-            # manually set random seed upon load so that runs are reproducible.
+            # manually set random seed upon save/load so that runs are reproducible.
             # this doesn't work for cases e.g. with data not being shuffled or if the user writes a custom sampler but it works fine for the default config
             torch.manual_seed(self.steps.item())
 
@@ -709,6 +713,10 @@ class SemanticTransformerTrainer(nn.Module):
             version = __version__
         )
         torch.save(pkg, path)
+        if self.dl.shuffle:
+            # manually set random seed upon save/load so that runs are reproducible.
+            # this doesn't work for cases e.g. with data not being shuffled or if the user writes a custom sampler but it works fine for the default config
+            torch.manual_seed(self.steps.item())
 
     def load(self, path):
         transformer = self.accelerator.unwrap_model(self.transformer)
@@ -719,7 +727,7 @@ class SemanticTransformerTrainer(nn.Module):
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
         if self.dl.shuffle:
-            # manually set random seed upon load so that runs are reproducible.
+            # manually set random seed upon save/load so that runs are reproducible.
             # this doesn't work for cases e.g. with data not being shuffled or if the user writes a custom sampler but it works fine for the default config
             torch.manual_seed(self.steps.item())
 
@@ -970,6 +978,10 @@ class CoarseTransformerTrainer(nn.Module):
             version = __version__
         )
         torch.save(pkg, path)
+        if self.dl.shuffle:
+            # manually set random seed upon save/load so that runs are reproducible.
+            # this doesn't work for cases e.g. with data not being shuffled or if the user writes a custom sampler but it works fine for the default config
+            torch.manual_seed(self.steps.item())
 
     def load(self, path):
         transformer = self.accelerator.unwrap_model(self.transformer)
@@ -980,7 +992,7 @@ class CoarseTransformerTrainer(nn.Module):
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
         if self.dl.shuffle:
-            # manually set random seed upon load so that runs are reproducible.
+            # manually set random seed upon save/load so that runs are reproducible.
             # this doesn't work for cases e.g. with data not being shuffled or if the user writes a custom sampler but it works fine for the default config
             torch.manual_seed(self.steps.item())
 
@@ -1225,6 +1237,10 @@ class FineTransformerTrainer(nn.Module):
             version = __version__
         )
         torch.save(pkg, path)
+        if self.dl.shuffle:
+            # manually set random seed upon save/load so that runs are reproducible.
+            # this doesn't work for cases e.g. with data not being shuffled or if the user writes a custom sampler but it works fine for the default config
+            torch.manual_seed(self.steps.item())
 
     def load(self, path):
         transformer = self.accelerator.unwrap_model(self.transformer)
@@ -1235,7 +1251,7 @@ class FineTransformerTrainer(nn.Module):
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
         if self.dl.shuffle:
-            # manually set random seed upon load so that runs are reproducible.
+            # manually set random seed upon save/load so that runs are reproducible.
             # this doesn't work for cases e.g. with data not being shuffled or if the user writes a custom sampler but it works fine for the default config
             torch.manual_seed(self.steps.item())
 
