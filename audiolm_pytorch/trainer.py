@@ -592,7 +592,8 @@ class SemanticTransformerTrainer(nn.Module):
         accelerate_kwargs: dict = dict(),
         split_batches = False,
         drop_last = False,
-        force_clear_prev_results = None
+        force_clear_prev_results = None,
+        average_valid_loss_over_grad_accum_every: bool = True, # if False, valid loss on a single batch
     ):
         super().__init__()
         check_one_trainer()
@@ -697,6 +698,7 @@ class SemanticTransformerTrainer(nn.Module):
         
         hps = {"num_train_steps": num_train_steps, "data_max_length": data_max_length, "learning_rate": lr}
         self.accelerator.init_trackers("semantic", config=hps)
+        self.average_valid_loss_over_grad_accum_every = average_valid_loss_over_grad_accum_every
 
     def save(self, path):
         pkg = dict(
@@ -783,12 +785,15 @@ class SemanticTransformerTrainer(nn.Module):
         self.accelerator.wait_for_everyone()
 
         if self.is_main and not (steps % self.save_results_every):
-            data_kwargs = self.data_tuple_to_kwargs(next(self.valid_dl_iter))
+            valid_loss = 0
+            for _ in range(self.average_valid_loss_over_grad_accum_every):
+                data_kwargs = self.data_tuple_to_kwargs(next(self.valid_dl_iter))
 
-            with torch.inference_mode():
-                self.train_wrapper.eval()
-                valid_loss = self.train_wrapper(**data_kwargs, return_loss = True)
-
+                with torch.inference_mode():
+                    self.train_wrapper.eval()
+                    valid_loss += self.train_wrapper(**data_kwargs, return_loss = True)
+            valid_loss = valid_loss.clone() # avoid inference mode to non-inference mode error
+            valid_loss /= self.average_valid_loss_over_grad_accum_every
             self.print(f'{steps}: valid loss {valid_loss}')
             self.accelerator.log({"valid_loss": valid_loss}, step=steps)
 
@@ -841,7 +846,8 @@ class CoarseTransformerTrainer(nn.Module):
         accelerate_kwargs: dict = dict(),
         split_batches = False,
         drop_last = False,
-        force_clear_prev_results = None
+        force_clear_prev_results = None,
+        average_valid_loss_over_grad_accum_every: bool = True,  # if False, valid loss on a single batch
     ):
         super().__init__()
         check_one_trainer()
@@ -954,6 +960,7 @@ class CoarseTransformerTrainer(nn.Module):
         self.accelerator.init_trackers("coarse", config=hps)        
 
         self.train_wrapper.to(self.device)
+        self.average_valid_loss_over_grad_accum_every = average_valid_loss_over_grad_accum_every
 
     def save(self, path):
         pkg = dict(
@@ -1036,16 +1043,19 @@ class CoarseTransformerTrainer(nn.Module):
         self.accelerator.wait_for_everyone()
 
         if self.is_main and not (steps % self.save_results_every):
-            data_kwargs = dict(zip(self.ds_fields, next(self.valid_dl_iter)))
+            valid_loss = 0
+            for i in range(self.average_valid_loss_over_grad_accum_every):
+                data_kwargs = dict(zip(self.ds_fields, next(self.valid_dl_iter)))
 
-            with torch.inference_mode():
-                self.train_wrapper.eval()
+                with torch.inference_mode():
+                    self.train_wrapper.eval()
 
-                valid_loss = self.train_wrapper(
-                    **data_kwargs,
-                    return_loss = True
-                )
-
+                    valid_loss += self.train_wrapper(
+                        **data_kwargs,
+                        return_loss = True
+                    )
+            valid_loss = valid_loss.clone() # avoid inference mode to non-inference mode error
+            valid_loss /= self.average_valid_loss_over_grad_accum_every
             self.print(f'{steps}: valid loss {valid_loss}')
             self.accelerator.log({"valid_loss": valid_loss}, step=steps)
 
@@ -1097,7 +1107,8 @@ class FineTransformerTrainer(nn.Module):
         accelerate_kwargs: dict = dict(),
         split_batches = False,
         drop_last = False,
-        force_clear_prev_results = None
+        force_clear_prev_results = None,
+        average_valid_loss_over_grad_accum_every: bool = True, # if False, valid loss on a single batch
     ):
         super().__init__()
         check_one_trainer()
@@ -1205,6 +1216,7 @@ class FineTransformerTrainer(nn.Module):
         self.accelerator.init_trackers("fine", config=hps)        
 
         self.train_wrapper.to(self.device)
+        self.average_valid_loss_over_grad_accum_every = average_valid_loss_over_grad_accum_every
 
     def save(self, path):
         pkg = dict(
@@ -1289,12 +1301,15 @@ class FineTransformerTrainer(nn.Module):
         self.accelerator.wait_for_everyone()
 
         if self.is_main and not (steps % self.save_results_every):
-            data_kwargs = self.data_tuple_to_kwargs(next(self.valid_dl_iter))
+            valid_loss = 0
+            for i in range(self.average_valid_loss_over_grad_accum_every):
+                data_kwargs = self.data_tuple_to_kwargs(next(self.valid_dl_iter))
 
-            with torch.inference_mode():
-                self.train_wrapper.eval()
-                valid_loss = self.train_wrapper(**data_kwargs, return_loss = True)
-
+                with torch.inference_mode():
+                    self.train_wrapper.eval()
+                    valid_loss += self.train_wrapper(**data_kwargs, return_loss = True)
+            valid_loss = valid_loss.clone() # avoid inference mode to non-inference mode error
+            valid_loss /= self.average_valid_loss_over_grad_accum_every
             self.print(f'{steps}: valid loss {valid_loss}')
             self.accelerator.log({"valid_loss": valid_loss}, step=steps)
 
