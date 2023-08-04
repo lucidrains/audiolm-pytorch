@@ -792,6 +792,7 @@ class SemanticTransformerTrainer(nn.Module):
                 with torch.inference_mode():
                     self.train_wrapper.eval()
                     valid_loss += self.train_wrapper(**data_kwargs, return_loss = True)
+            valid_loss = valid_loss.clone() # avoid inference mode to non-inference mode error
             valid_loss /= self.average_valid_loss_over_grad_accum_every
             self.print(f'{steps}: valid loss {valid_loss}')
             self.accelerator.log({"valid_loss": valid_loss}, step=steps)
@@ -1053,6 +1054,7 @@ class CoarseTransformerTrainer(nn.Module):
                         **data_kwargs,
                         return_loss = True
                     )
+            valid_loss = valid_loss.clone() # avoid inference mode to non-inference mode error
             valid_loss /= self.average_valid_loss_over_grad_accum_every
             self.print(f'{steps}: valid loss {valid_loss}')
             self.accelerator.log({"valid_loss": valid_loss}, step=steps)
@@ -1306,6 +1308,7 @@ class FineTransformerTrainer(nn.Module):
                 with torch.inference_mode():
                     self.train_wrapper.eval()
                     valid_loss += self.train_wrapper(**data_kwargs, return_loss = True)
+            valid_loss = valid_loss.clone() # avoid inference mode to non-inference mode error
             valid_loss /= self.average_valid_loss_over_grad_accum_every
             self.print(f'{steps}: valid loss {valid_loss}')
             self.accelerator.log({"valid_loss": valid_loss}, step=steps)
