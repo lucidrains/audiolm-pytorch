@@ -15,7 +15,7 @@ from torch.utils.data import Dataset, DataLoader
 
 from audiolm_pytorch.utils import curtail_to_multiple
 
-from einops import rearrange
+from einops import rearrange, reduce
 
 # helper functions
 
@@ -25,9 +25,8 @@ def exists(val):
 def cast_tuple(val, length = 1):
     return val if isinstance(val, tuple) else ((val,) * length)
 
-# type
-
-OptionalIntOrTupleInt = Optional[Union[int, Tuple[Optional[int], ...]]]
+def is_unique(arr):
+    return len(set(arr)) == len(arr)
 
 # dataset functions
 
@@ -36,10 +35,10 @@ class SoundDataset(Dataset):
     def __init__(
         self,
         folder,
+        target_sample_hz: Union[int, Tuple[int, ...]],  # target sample hz must be specified, or a tuple of them if one wants to return multiple resampled
         exts = ['flac', 'wav', 'mp3', 'webm'],
-        max_length: OptionalIntOrTupleInt = None,
-        target_sample_hz: OptionalIntOrTupleInt = None,
-        seq_len_multiple_of: OptionalIntOrTupleInt = None
+        max_length: Optional[int] = None,               # max length would apply to the highest target_sample_hz, if there are multiple
+        seq_len_multiple_of: Optional[Union[int, Tuple[Optional[int], ...]]] = None
     ):
         super().__init__()
         path = Path(folder)
@@ -50,13 +49,17 @@ class SoundDataset(Dataset):
 
         self.files = files
 
+        self.max_length = max_length
         self.target_sample_hz = cast_tuple(target_sample_hz)
         num_outputs = len(self.target_sample_hz)
 
-        self.max_length = cast_tuple(max_length, num_outputs)
+        # strategy, if there are multiple target sample hz, would be to resample to the highest one first
+        # apply the max lengths, and then resample to all the others
+
+        self.max_target_sample_hz = max(self.target_sample_hz)
         self.seq_len_multiple_of = cast_tuple(seq_len_multiple_of, num_outputs)
 
-        assert len(self.max_length) == len(self.target_sample_hz) == len(self.seq_len_multiple_of)
+        assert len(self.target_sample_hz) == len(self.seq_len_multiple_of)
 
     def __len__(self):
         return len(self.files)
@@ -70,34 +73,40 @@ class SoundDataset(Dataset):
 
         if data.shape[0] > 1:
             # the audio has more than 1 channel, convert to mono
-            data = torch.mean(data, dim=0).unsqueeze(0)
+            data = reduce(data, 'c ... -> 1 ...', 'mean')
+
+        # first resample data to the max target freq
+
+        data = resample(data, sample_hz, self.max_target_sample_hz)
+        sample_hz = self.max_target_sample_hz
+
+        # then curtail or pad the audio depending on the max length
+
+        max_length = self.max_length
+        audio_length = data.size(1)
+
+        if exists(max_length):
+            if audio_length > max_length:
+                max_start = audio_length - max_length
+                start = torch.randint(0, max_start, (1, ))
+                data = data[:, start:start + max_length]
+            else:
+                data = F.pad(data, (0, max_length - audio_length), 'constant')
+
+        data = rearrange(data, '1 ... -> ...')
+
+        # resample if target_sample_hz is not None in the tuple
 
         num_outputs = len(self.target_sample_hz)
         data = cast_tuple(data, num_outputs)
 
-        # resample if target_sample_hz is not None in the tuple
-
-        data_tuple = tuple((resample(d, sample_hz, target_sample_hz) if exists(target_sample_hz) else d) for d, target_sample_hz in zip(data, self.target_sample_hz))
+        data_tuple = tuple(resample(d, sample_hz, target_sample_hz) for d, target_sample_hz in zip(data, self.target_sample_hz))
 
         output = []
 
-        # process each of the data resample at different frequencies individually
+        # process each of the data resample at different frequencies individually for curtailing to multiple
 
-        for data, max_length, seq_len_multiple_of in zip(data_tuple, self.max_length, self.seq_len_multiple_of):
-            audio_length = data.size(1)
-
-            # pad or curtail
-
-            if exists(max_length):
-                if audio_length > max_length:
-                    max_start = audio_length - max_length
-                    start = torch.randint(0, max_start, (1, ))
-                    data = data[:, start:start + max_length]
-                else:
-                    data = F.pad(data, (0, max_length - audio_length), 'constant')
-
-            data = rearrange(data, '1 ... -> ...')
-
+        for data, seq_len_multiple_of in zip(data_tuple, self.seq_len_multiple_of):
             if exists(seq_len_multiple_of):
                 data = curtail_to_multiple(data, seq_len_multiple_of)
 
