@@ -131,7 +131,7 @@ def collate_one_or_multiple_tensors(fn):
         is_one_data = not isinstance(data[0], tuple)
 
         if is_one_data:
-            data = torch.stack(data)
+            data = fn(data)
             return (data,)
 
         outputs = []
