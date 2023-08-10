@@ -11,8 +11,16 @@ from vector_quantize_pytorch import ResidualVQ
 from encodec import EncodecModel
 from encodec.utils import _linear_overlap_add
 
+# helper functions
+
 def exists(val):
     return val is not None
+
+# hacky way to get num quantizers
+
+def get_num_quantizers(model: EncodecModel, audio_length = 512):
+    out = model.encode(torch.randn(1, 1, audio_length))
+    return out[0][0].shape[1]
 
 class EncodecWrapper(nn.Module):
     """
@@ -31,15 +39,22 @@ class EncodecWrapper(nn.Module):
         target_sample_hz = 24000,
         strides = (2, 4, 5, 8),
         num_quantizers = 8,
+        bandwidth = 6.0
     ):
         super().__init__()
         # Instantiate a pretrained EnCodec model
         self.model = EncodecModel.encodec_model_24khz()
         self.model.normalize = False # this means we don't need to scale codes e.g. when running model.encode(wav)
 
+        # The number of codebooks used will be determined bythe bandwidth selected.
+        # E.g. for a bandwidth of 6kbps, `n_q = 8` codebooks are used.
+        # Supported bandwidths are 1.5kbps (n_q = 2), 3 kbps (n_q = 4), 6 kbps (n_q = 8) and 12 kbps (n_q =16) and 24kbps (n_q=32).
+        # For the 48 kHz model, only 3, 6, 12, and 24 kbps are supported. The number
+        # of codebooks for each is half that of the 24 kHz model as the frame rate is twice as much.
+
         # bandwidth affects num quantizers used: https://github.com/facebookresearch/encodec/pull/41
-        self.model.set_target_bandwidth(6.0)
-        assert num_quantizers == 8, "assuming 8 quantizers for now, see bandwidth comment above"
+        self.model.set_target_bandwidth(bandwidth)
+        num_quantizers = get_num_quantizers(self.model)
 
         # Fields that SoundStream has that get used externally. We replicate them here.
         self.target_sample_hz = target_sample_hz
@@ -55,7 +70,7 @@ class EncodecWrapper(nn.Module):
         self.rq = ResidualVQ(
             dim = 128,
             codebook_size = 1024,
-            num_quantizers = 8
+            num_quantizers = num_quantizers
         )
 
         # copy codebook over to ResidualVQ for cross entropy loss logic from naturalspeech2
