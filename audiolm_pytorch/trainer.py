@@ -4,6 +4,7 @@ import copy
 from random import choice
 from pathlib import Path
 from shutil import rmtree
+from collections import Counter
 
 from beartype.typing import Union, List, Optional, Tuple
 from typing_extensions import Annotated
@@ -102,11 +103,7 @@ def accum_log(log, new_logs):
 # auto data to module keyword argument routing functions
 
 def has_duplicates(tup):
-    counts = dict()
-    for el in tup:
-        if el not in counts:
-            counts[el] = 0
-        counts[el] += 1
+    counts = dict(Counter(tup))
     return any(filter(lambda count: count > 1, counts.values()))
 
 def determine_types(data, config):
