@@ -344,6 +344,7 @@ $ accelerate launch train.py
 - [x] add flash attention with <a href="https://arxiv.org/abs/2305.19466">NoPE</a>
 - [x] accept prime wave in `AudioLM` as a path to an audio file, and auto resample for semantic vs acoustic
 
+- [ ] add cached key/values as well as spec decoding, as validate to work. use early exit scheme for starters
 - [ ] design a hierarchical coarse and fine transformer
 - [ ] investigate <a href="https://openreview.net/forum?id=H-VlwsYvVi">spec decoding</a>, first test in x-transformers, then port over if applicable
 
