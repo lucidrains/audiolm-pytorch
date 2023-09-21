@@ -469,7 +469,8 @@ class Transformer(nn.Module):
         else:
             rel_pos_bias = maybe(self.rel_pos_bias)(n, n)
 
-        rel_pos_bias = rel_pos_bias[..., cache_len:, :]
+        if exists(rel_pos_bias):
+            rel_pos_bias = rel_pos_bias[..., cache_len:, :]
 
         # self attention kwargs
 
@@ -667,7 +668,7 @@ class SemanticTransformer(nn.Module):
         if not return_kv_cache:
             return logits
 
-        return logits, kv_cache
+        return logits, new_kv_cache
 
 class CoarseTransformer(nn.Module):
     @beartype
@@ -765,21 +766,40 @@ class CoarseTransformer(nn.Module):
         self,
         *args,
         cond_scale = 3,
+        return_kv_cache = False,
+        kv_cache = None,
+        embed_cache = None,
         **kwargs
     ):
-        semantic_logits, coarse_logits = self.forward(*args, cond_drop_prob = 0., **kwargs)
+        iter_kv_cache = iter(default(kv_cache, []))
+        iter_embed_cache = iter(default(embed_cache, []))
+        new_kv_caches = []
+        new_embed_caches = []
+
+        (semantic_logits, coarse_logits), (new_kv_cache, new_embed_cache) = self.forward(*args, cond_drop_prob = 0., return_cache = True, kv_cache = next(iter_kv_cache, None), embed_cache = next(iter_embed_cache, None), **kwargs)
+        new_kv_caches.append(new_kv_cache)
+        new_embed_caches.append(new_embed_cache)
 
         if cond_scale == 1 or not self.has_condition:
-            return semantic_logits, coarse_logits
+            if not return_kv_cache:
+                return semantic_logits, coarse_logits
 
-        null_semantic_logits, null_coarse_logits = self.forward(*args, cond_drop_prob = 1., **kwargs)
+            return (semantic_logits, coarse_logits), (torch.stack(new_kv_caches), torch.stack(new_embed_caches))
+
+        (null_semantic_logits, null_coarse_logits), (null_new_kv_cache, null_new_embed_cache) = self.forward(*args, cond_drop_prob = 1., return_cache = True, kv_cache = next(iter_kv_cache, None), embed_cache = next(iter_embed_cache, None), **kwargs)
+        new_kv_caches.append(null_new_kv_cache)
+        new_embed_caches.append(null_new_embed_cache)
 
         scaled_semantic_logits = None
         if exists(null_semantic_logits):
             scaled_semantic_logits = null_semantic_logits + (semantic_logits - null_semantic_logits) * cond_scale
 
         scaled_coarse_logits = null_coarse_logits + (coarse_logits - null_coarse_logits) * cond_scale
-        return scaled_semantic_logits, scaled_coarse_logits
+
+        if not return_kv_cache:
+            return scaled_semantic_logits, scaled_coarse_logits
+
+        return (scaled_semantic_logits, scaled_coarse_logits), (torch.stack(new_kv_caches), torch.stack(new_embed_caches))
 
     @beartype
     def forward(
@@ -791,7 +811,10 @@ class CoarseTransformer(nn.Module):
         text: Optional[List[str]] = None,
         text_embeds = None,
         cond_drop_prob = None,
-        return_only_coarse_logits = False
+        return_only_coarse_logits = False,
+        return_cache = False,
+        kv_cache = None,
+        embed_cache = None
     ):
         b, device = semantic_token_ids.shape[0], semantic_token_ids.device
         arange = partial(torch.arange, device = device)
@@ -861,13 +884,22 @@ class CoarseTransformer(nn.Module):
 
         # attend
 
-        tokens = self.transformer(
+        tokens, new_kv_cache = self.transformer(
             tokens,
             context = text_embeds,
             attn_bias = attn_bias,
             self_attn_mask = self_attn_mask,
-            context_mask = text_mask
+            context_mask = text_mask,
+            kv_cache = kv_cache,
+            return_kv_cache = True
         )
+
+        if exists(embed_cache):
+            tokens = torch.cat((embed_cache, tokens), dim = -2)
+
+        new_embed_cache = tokens
+
+        # segment into semantic and coarse acoustic tokens
 
         pred_semantic_tokens, pred_coarse_tokens = tokens[:, :semantic_seq_len], tokens[:, (semantic_seq_len + 1):]
 
@@ -897,7 +929,12 @@ class CoarseTransformer(nn.Module):
         else:
             coarse_logits = coarse_logits_groupable
 
-        return semantic_logits, coarse_logits
+        logits = (semantic_logits, coarse_logits)
+
+        if not return_cache:
+            return logits
+
+        return logits, (new_kv_cache, new_embed_cache)
 
 class FineTransformer(nn.Module):
     def __init__(
@@ -1497,6 +1534,7 @@ class CoarseTransformerWrapper(nn.Module):
         filter_thres = 0.9,
         temperature = 1.,
         reconstruct_wave = False,
+        use_kv_cache = True,
         **kwargs
     ):
         batch, device = semantic_token_ids.shape[0], self.device
@@ -1543,18 +1581,30 @@ class CoarseTransformerWrapper(nn.Module):
         init_coarse_time_step = 0
         sampled_coarse_token_ids = coarse_token_ids.clone()
 
+        # kv cache
+
+        kv_cache = None
+        embed_cache = None
+
         for time_step in tqdm(range(init_coarse_time_step, max_time_steps), desc = 'generating coarse'):
             for ind in range(self.num_coarse_quantizers):
                 just_finished_quantizer_step = (ind == 0 and time_step > 0)
 
-                _, coarse_logits = self.transformer.forward_with_cond_scale(
+                (_, coarse_logits), (next_kv_cache, next_embed_cache) = self.transformer.forward_with_cond_scale(
                     coarse_token_ids = sampled_coarse_token_ids,
                     semantic_token_ids = semantic_token_ids,
                     text_embeds = text_embeds,
                     cond_scale = cond_scale,
+                    return_kv_cache = True,
+                    kv_cache = kv_cache,
+                    embed_cache = embed_cache,
                     return_only_coarse_logits = True,
                     **kwargs
                 )
+
+                if use_kv_cache:
+                    kv_cache = next_kv_cache
+                    embed_cache = next_embed_cache
 
                 last_coarse_logits = coarse_logits[:, -1]
 
@@ -1656,7 +1706,6 @@ class CoarseTransformerWrapper(nn.Module):
             text_embeds = text_embeds,
             **kwargs
         )
-
 
         # whether to early return the logits
 

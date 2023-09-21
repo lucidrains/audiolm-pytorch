@@ -6,7 +6,7 @@ from collections import namedtuple
 from functools import wraps
 from packaging import version
 
-from einops import rearrange
+from einops import rearrange, repeat
 
 # constants
 
@@ -69,8 +69,8 @@ class Attend(nn.Module):
     def flash_attn(self, q, k, v, mask = None):
         _, heads, q_len, _, k_len, is_cuda = *q.shape, k.shape[-2], q.is_cuda
 
-        k = rearrange(k, 'b ... -> b 1 ...').expand_as(q)
-        v = rearrange(v, 'b ... -> b 1 ...').expand_as(q)
+        k = repeat(k, 'b ... -> b h ...', h = heads)
+        v = repeat(v, 'b ... -> b h ...', h = heads)
 
         causal = self.causal
 
