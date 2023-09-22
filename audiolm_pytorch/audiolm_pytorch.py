@@ -1041,26 +1041,44 @@ class FineTransformer(nn.Module):
         self.load_state_dict(pkg['model'])
         return pkg
 
-
     def forward_with_cond_scale(
         self,
         *args,
         cond_scale = 3,
+        return_kv_cache = False,
+        kv_cache = None,
+        embed_cache = None,
         **kwargs
     ):
-        coarse_logits, fine_logits = self.forward(*args, cond_drop_prob = 0., **kwargs)
+        iter_kv_cache = iter(default(kv_cache, []))
+        iter_embed_cache = iter(default(embed_cache, []))
+        new_kv_caches = []
+        new_embed_caches = []
+
+        (semantic_logits, coarse_logits), (new_kv_cache, new_embed_cache) = self.forward(*args, cond_drop_prob = 0., return_cache = True, kv_cache = next(iter_kv_cache, None), embed_cache = next(iter_embed_cache, None), **kwargs)
+        new_kv_caches.append(new_kv_cache)
+        new_embed_caches.append(new_embed_cache)
 
         if cond_scale == 1 or not self.has_condition:
-            return coarse_logits, fine_logits
+            if not return_kv_cache:
+                return semantic_logits, coarse_logits
 
-        null_coarse_logits, null_fine_logits = self.forward(*args, cond_drop_prob = 1., **kwargs)
+            return (semantic_logits, coarse_logits), (torch.stack(new_kv_caches), torch.stack(new_embed_caches))
 
-        scaled_coarse_logits = None
-        if exists(null_coarse_logits):
-            scaled_coarse_logits =  null_coarse_logits + (coarse_logits - null_coarse_logits) * cond_scale
+        (null_semantic_logits, null_coarse_logits), (null_new_kv_cache, null_new_embed_cache) = self.forward(*args, cond_drop_prob = 1., return_cache = True, kv_cache = next(iter_kv_cache, None), embed_cache = next(iter_embed_cache, None), **kwargs)
+        new_kv_caches.append(null_new_kv_cache)
+        new_embed_caches.append(null_new_embed_cache)
 
-        scaled_fine_logits =  null_fine_logits + (fine_logits - null_fine_logits) * cond_scale
-        return scaled_coarse_logits, scaled_fine_logits
+        scaled_semantic_logits = None
+        if exists(null_semantic_logits):
+            scaled_semantic_logits = null_semantic_logits + (semantic_logits - null_semantic_logits) * cond_scale
+
+        scaled_coarse_logits = null_coarse_logits + (coarse_logits - null_coarse_logits) * cond_scale
+
+        if not return_kv_cache:
+            return scaled_semantic_logits, scaled_coarse_logits
+
+        return (scaled_semantic_logits, scaled_coarse_logits), (torch.stack(new_kv_caches), torch.stack(new_embed_caches))
 
     def forward(
         self,
@@ -1070,6 +1088,9 @@ class FineTransformer(nn.Module):
         text_embeds = None,
         cond_drop_prob = None,
         self_attn_mask = None,
+        kv_cache = None,
+        embed_cache = None,
+        return_cache = False,
         return_only_fine_logits = False
     ):
         b, device = coarse_token_ids.shape[0], coarse_token_ids.device
@@ -1225,13 +1246,22 @@ class FineTransformer(nn.Module):
 
         # attention
 
-        tokens = self.transformer(
+        tokens, next_kv_cache = self.transformer(
             tokens,
             context = text_embeds,
             self_attn_mask = self_attn_mask,
             context_mask = text_mask,
-            attn_bias = attn_bias
+            attn_bias = attn_bias,
+            kv_cache = kv_cache,
+            return_kv_cache = True
         )
+
+        if exists(embed_cache):
+            tokens = torch.cat((embed_cache, tokens), dim = -2)
+
+        new_embed_cache = tokens
+
+        # figure out which tokens are coarse vs fine for logit projection
 
         pred_coarse_tokens, pred_fine_tokens = tokens[:, :n], tokens[:, (n + 1):]
 
@@ -1277,7 +1307,12 @@ class FineTransformer(nn.Module):
         else:
             fine_logits = fine_logits_groupable
 
-        return coarse_logits, fine_logits
+        logits = (coarse_logits, fine_logits)
+
+        if not return_cache:
+            return logits
+
+        return logits, (next_kv_cache, new_embed_cache)
 
 # training wrappers
 
@@ -1798,6 +1833,7 @@ class FineTransformerWrapper(nn.Module):
         filter_thres = 0.9,
         temperature = 1.,
         reconstruct_wave = False,
+        use_kv_cache = True,
         mask_out_generated_fine_tokens = False,
         **kwargs
     ):
@@ -1845,20 +1881,32 @@ class FineTransformerWrapper(nn.Module):
 
         sampled_fine_token_ids = fine_token_ids.clone()
 
+        # kv cache
+
+        kv_cache = None
+        embed_cache = None
+
         for time_step in tqdm(range(init_fine_time_step, max_time_steps), desc = 'generating fine'):
             for ind in range(self.num_fine_quantizers):
                 just_finished_quantizer_step = (ind == 0 and time_step > 0)
 
-                _, fine_logits = self.transformer.forward_with_cond_scale(
+                (_, fine_logits), (next_kv_cache, next_embed_cache) = self.transformer.forward_with_cond_scale(
                     coarse_token_ids = coarse_token_ids,
                     fine_token_ids = sampled_fine_token_ids,
                     text_embeds = text_embeds,
                     cond_scale = cond_scale,
                     return_only_fine_logits = True,
+                    kv_cache = kv_cache,
+                    embed_cache = embed_cache,
+                    return_kv_cache = True,
                     **kwargs
                 )
 
                 last_fine_logits = fine_logits[:, -1]
+
+                if use_kv_cache:
+                    kv_cache = next_kv_cache
+                    embed_cache = next_embed_cache
 
                 if not just_finished_quantizer_step:
                     last_fine_logits[:, -1] = float('-inf')  # prevent from eos in the middle of a time step
