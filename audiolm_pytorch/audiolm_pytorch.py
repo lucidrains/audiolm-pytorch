@@ -668,7 +668,7 @@ class SemanticTransformer(nn.Module):
         if not return_kv_cache:
             return logits
 
-        return logits, new_kv_cache
+        return logits, kv_cache
 
 class CoarseTransformer(nn.Module):
     @beartype
