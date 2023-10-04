@@ -60,6 +60,8 @@ def check_one_trainer():
     assert not ONE_TRAINER_INSTANTIATED, 'only one Trainer can be instantiated at a time for training'
     ONE_TRAINER_INSTANTIATED = True
 
+DEFAULT_DDP_KWARGS = DistributedDataParallelKwargs(find_unused_parameters = True)
+
 # for automatically routing data emitted from a dataset to keywords of the transformer wrappers
 
 DATASET_FIELD_TYPE_CONFIG = dict(
@@ -163,7 +165,7 @@ class SoundStreamTrainer(nn.Module):
         ema_update_every: int = 10,
         apply_grad_penalty_every: int = 4,
         dl_num_workers: int = 0,
-        accelerator: Accelerator = None,
+        accelerator: Optional[Accelerator] = None,
         accelerate_kwargs: dict = dict(),
         dataloader_drop_last = True,
         split_batches = False,
@@ -181,10 +183,8 @@ class SoundStreamTrainer(nn.Module):
             self.accelerator = accelerator
             assert len(accelerate_kwargs) == 0
         else:
-            kwargs = DistributedDataParallelKwargs(find_unused_parameters = True)
-
             self.accelerator = Accelerator(
-                kwargs_handlers = [kwargs],
+                kwargs_handlers = [DEFAULT_DDP_KWARGS],
                 split_batches = split_batches,
                 **accelerate_kwargs
             )
@@ -596,6 +596,7 @@ class SemanticTransformerTrainer(nn.Module):
         check_one_trainer()
 
         self.accelerator = Accelerator(
+            kwargs_handlers = [DEFAULT_DDP_KWARGS],
             split_batches = split_batches,
             **accelerate_kwargs
         )
@@ -850,6 +851,7 @@ class CoarseTransformerTrainer(nn.Module):
         check_one_trainer()
 
         self.accelerator = Accelerator(
+            kwargs_handlers = [DEFAULT_DDP_KWARGS],
             split_batches = split_batches,
             **accelerate_kwargs
         )
@@ -1111,6 +1113,7 @@ class FineTransformerTrainer(nn.Module):
         check_one_trainer()
 
         self.accelerator = Accelerator(
+            kwargs_handlers = [DEFAULT_DDP_KWARGS],
             split_batches = split_batches,
             **accelerate_kwargs
         )
