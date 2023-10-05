@@ -1,6 +1,7 @@
 import re
-from math import sqrt
 import copy
+from math import sqrt
+from datetime import timedelta
 from random import choice
 from pathlib import Path
 from shutil import rmtree
@@ -44,8 +45,8 @@ from audiolm_pytorch.utils import AudioConditionerBase
 from audiolm_pytorch.version import __version__
 from packaging import version
 
-from accelerate import (Accelerator, DistributedType)
-from accelerate.utils import DistributedDataParallelKwargs
+from accelerate import Accelerator, DistributedType
+from accelerate.utils import DistributedDataParallelKwargs, InitProcessGroupKwargs
 
 # constants
 
@@ -154,8 +155,8 @@ class SoundStreamTrainer(nn.Module):
         max_grad_norm: float = 0.5,
         discr_max_grad_norm: float = None,
         save_results_every: int = 100,
-        save_model_every: int= 1000,
-        log_losses_every: int= 1,
+        save_model_every: int = 1000,
+        log_losses_every: int = 1,
         results_folder: str = './results',
         valid_frac: float = 0.05,
         random_split_seed: int = 42,
@@ -167,6 +168,7 @@ class SoundStreamTrainer(nn.Module):
         dl_num_workers: int = 0,
         accelerator: Optional[Accelerator] = None,
         accelerate_kwargs: dict = dict(),
+        init_process_group_timeout_seconds = 1800,
         dataloader_drop_last = True,
         split_batches = False,
         use_lion: bool = False,
@@ -183,8 +185,10 @@ class SoundStreamTrainer(nn.Module):
             self.accelerator = accelerator
             assert len(accelerate_kwargs) == 0
         else:
+            init_process_kwargs = InitProcessGroupKwargs(timeout = timedelta(seconds = init_process_group_timeout_seconds))
+
             self.accelerator = Accelerator(
-                kwargs_handlers = [DEFAULT_DDP_KWARGS],
+                kwargs_handlers = [DEFAULT_DDP_KWARGS, init_process_kwargs],
                 split_batches = split_batches,
                 **accelerate_kwargs
             )
@@ -550,6 +554,8 @@ class SoundStreamTrainer(nn.Module):
 
             self.print(f'{steps}: saving model to {str(self.results_folder)}')
 
+        self.accelerator.wait_for_everyone()
+
         self.steps += 1
         return logs
 
@@ -587,6 +593,7 @@ class SemanticTransformerTrainer(nn.Module):
         save_model_every = 1000,
         results_folder = './results',
         accelerate_kwargs: dict = dict(),
+        init_process_group_timeout_seconds = 1800,
         split_batches = False,
         drop_last = False,
         force_clear_prev_results = None,
@@ -595,8 +602,10 @@ class SemanticTransformerTrainer(nn.Module):
         super().__init__()
         check_one_trainer()
 
+        init_process_kwargs = InitProcessGroupKwargs(timeout = timedelta(seconds = init_process_group_timeout_seconds))
+
         self.accelerator = Accelerator(
-            kwargs_handlers = [DEFAULT_DDP_KWARGS],
+            kwargs_handlers = [DEFAULT_DDP_KWARGS, init_process_kwargs],
             split_batches = split_batches,
             **accelerate_kwargs
         )
@@ -790,6 +799,7 @@ class SemanticTransformerTrainer(nn.Module):
                 with torch.inference_mode():
                     self.train_wrapper.eval()
                     valid_loss += self.train_wrapper(**data_kwargs, return_loss = True)
+
             valid_loss = valid_loss.clone() # avoid inference mode to non-inference mode error
             valid_loss /= self.average_valid_loss_over_grad_accum_every
             self.print(f'{steps}: valid loss {valid_loss}')
@@ -802,6 +812,8 @@ class SemanticTransformerTrainer(nn.Module):
             self.save(model_path)
 
             self.print(f'{steps}: saving model to {str(self.results_folder)}')
+
+        self.accelerator.wait_for_everyone()
 
         self.steps += 1
         return logs
@@ -842,6 +854,7 @@ class CoarseTransformerTrainer(nn.Module):
         save_model_every = 1000,
         results_folder = './results',
         accelerate_kwargs: dict = dict(),
+        init_process_group_timeout_seconds = 1800,
         split_batches = False,
         drop_last = False,
         force_clear_prev_results = None,
@@ -850,8 +863,10 @@ class CoarseTransformerTrainer(nn.Module):
         super().__init__()
         check_one_trainer()
 
+        init_process_kwargs = InitProcessGroupKwargs(timeout = timedelta(seconds = init_process_group_timeout_seconds))
+
         self.accelerator = Accelerator(
-            kwargs_handlers = [DEFAULT_DDP_KWARGS],
+            kwargs_handlers = [DEFAULT_DDP_KWARGS, init_process_kwargs],
             split_batches = split_batches,
             **accelerate_kwargs
         )
@@ -1066,6 +1081,8 @@ class CoarseTransformerTrainer(nn.Module):
 
             self.print(f'{steps}: saving model to {str(self.results_folder)}')
 
+        self.accelerator.wait_for_everyone()
+
         self.steps += 1
         return logs
 
@@ -1104,6 +1121,7 @@ class FineTransformerTrainer(nn.Module):
         save_model_every = 1000,
         results_folder = './results',
         accelerate_kwargs: dict = dict(),
+        init_process_group_timeout_seconds = 1800,
         split_batches = False,
         drop_last = False,
         force_clear_prev_results = None,
@@ -1112,8 +1130,10 @@ class FineTransformerTrainer(nn.Module):
         super().__init__()
         check_one_trainer()
 
+        init_process_kwargs = InitProcessGroupKwargs(timeout = timedelta(seconds = init_process_group_timeout_seconds))
+
         self.accelerator = Accelerator(
-            kwargs_handlers = [DEFAULT_DDP_KWARGS],
+            kwargs_handlers = [DEFAULT_DDP_KWARGS, init_process_kwargs],
             split_batches = split_batches,
             **accelerate_kwargs
         )
@@ -1322,6 +1342,8 @@ class FineTransformerTrainer(nn.Module):
             self.save(model_path)
 
             self.print(f'{steps}: saving model to {str(self.results_folder)}')
+
+        self.accelerator.wait_for_everyone()
 
         self.steps += 1
         return logs
