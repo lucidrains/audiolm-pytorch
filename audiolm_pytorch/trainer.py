@@ -103,6 +103,12 @@ def accum_log(log, new_logs):
         log[key] = old_value + new_value
     return log
 
+def dict_values_to_device(d: dict, device):
+    out = {}
+    for k, v in d.items():
+        out[k] = v.to(device) if torch.is_tensor(v) else v
+    return out
+
 # auto data to module keyword argument routing functions
 
 def has_duplicates(tup):
@@ -679,13 +685,11 @@ class SemanticTransformerTrainer(nn.Module):
         (
             self.train_wrapper,
             self.optim,
-            self.dl,
-            self.valid_dl
+            self.dl
         ) = self.accelerator.prepare(
             self.train_wrapper,
             self.optim,
-            self.dl,
-            self.valid_dl
+            self.dl
         )
 
         # dataloader iterators
@@ -793,15 +797,19 @@ class SemanticTransformerTrainer(nn.Module):
 
         if self.is_main and not (steps % self.save_results_every):
             valid_loss = 0
+            unwrapped_model = self.accelerator.unwrap_model(self.train_wrapper)
+
             for _ in range(self.average_valid_loss_over_grad_accum_every):
                 data_kwargs = self.data_tuple_to_kwargs(next(self.valid_dl_iter))
+                data_kwargs = dict_values_to_device(data_kwargs, unwrapped_model.device)
 
                 with torch.inference_mode():
-                    self.train_wrapper.eval()
-                    valid_loss += self.train_wrapper(**data_kwargs, return_loss = True)
+                    unwrapped_model.eval()
+                    valid_loss += unwrapped_model(**data_kwargs, return_loss = True)
 
             valid_loss = valid_loss.clone() # avoid inference mode to non-inference mode error
             valid_loss /= self.average_valid_loss_over_grad_accum_every
+
             self.print(f'{steps}: valid loss {valid_loss}')
             self.accelerator.log({"valid_loss": valid_loss}, step=steps)
 
@@ -944,15 +952,13 @@ class CoarseTransformerTrainer(nn.Module):
         # prepare with accelerator
 
         (
-            self.transformer,
+            self.train_wrapper,
             self.optim,
-            self.dl,
-            self.valid_dl
+            self.dl
         ) = self.accelerator.prepare(
-            self.transformer,
+            self.train_wrapper,
             self.optim,
-            self.dl,
-            self.valid_dl
+            self.dl
         )
 
         # dataloader iterators
@@ -1058,18 +1064,23 @@ class CoarseTransformerTrainer(nn.Module):
 
         if self.is_main and not (steps % self.save_results_every):
             valid_loss = 0
+            unwrapped_model = self.accelerator.unwrap_model(self.train_wrapper)
+
             for i in range(self.average_valid_loss_over_grad_accum_every):
                 data_kwargs = dict(zip(self.ds_fields, next(self.valid_dl_iter)))
+                data_kwargs = dict_values_to_device(data_kwargs, unwrapped_model.device)
 
-                with torch.inference_mode():
-                    self.train_wrapper.eval()
+                with torch.no_grad():
+                    unwrapped_model.eval()
 
-                    valid_loss += self.train_wrapper(
+                    valid_loss += unwrapped_model(
                         **data_kwargs,
                         return_loss = True
                     )
+
             valid_loss = valid_loss.clone() # avoid inference mode to non-inference mode error
             valid_loss /= self.average_valid_loss_over_grad_accum_every
+
             self.print(f'{steps}: valid loss {valid_loss}')
             self.accelerator.log({"valid_loss": valid_loss}, step=steps)
 
@@ -1208,13 +1219,11 @@ class FineTransformerTrainer(nn.Module):
         (
             self.transformer,
             self.optim,
-            self.dl,
-            self.valid_dl
+            self.dl
         ) = self.accelerator.prepare(
             self.transformer,
             self.optim,
-            self.dl,
-            self.valid_dl
+            self.dl
         )
 
         # dataloader iterators
@@ -1321,13 +1330,16 @@ class FineTransformerTrainer(nn.Module):
         self.accelerator.wait_for_everyone()
 
         if self.is_main and not (steps % self.save_results_every):
+            unwrapped_model = self.accelerator.unwrap_model(self.train_wrapper)
             valid_loss = 0
+
             for i in range(self.average_valid_loss_over_grad_accum_every):
                 data_kwargs = self.data_tuple_to_kwargs(next(self.valid_dl_iter))
+                data_kwargs = dict_values_to_device(data_kwargs, unwrapped_model.device)
 
                 with torch.inference_mode():
-                    self.train_wrapper.eval()
-                    valid_loss += self.train_wrapper(**data_kwargs, return_loss = True)
+                    unwrapped_model.eval()
+                    valid_loss += unwrapped_model(**data_kwargs, return_loss = True)
 
             valid_loss = valid_loss.clone() # avoid inference mode to non-inference mode error
             valid_loss /= self.average_valid_loss_over_grad_accum_every
