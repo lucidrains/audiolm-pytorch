@@ -317,6 +317,7 @@ class SoundStreamTrainer(nn.Module):
         if self.is_main and force_clear_prev_results is True or (not exists(force_clear_prev_results) and len([*self.results_folder.glob('**/*')]) > 0 and yes_or_no('do you want to clear previous experiment checkpoints and results?')):
             rmtree(str(self.results_folder))
 
+        self.accelerator.wait_for_everyone()
         self.results_folder.mkdir(parents = True, exist_ok = True)
 
         # Initialize experiment trackers if an external Accelerator is not passed in
@@ -705,6 +706,7 @@ class SemanticTransformerTrainer(nn.Module):
         if self.is_main and force_clear_prev_results is True or (not exists(force_clear_prev_results) and len([*self.results_folder.glob('**/*')]) > 0 and yes_or_no('do you want to clear previous experiment checkpoints and results?')):
             rmtree(str(self.results_folder))
 
+        self.accelerator.wait_for_everyone()
         self.results_folder.mkdir(parents = True, exist_ok = True)
         
         hps = {"num_train_steps": num_train_steps, "data_max_length": data_max_length, "learning_rate": lr}
@@ -1239,6 +1241,7 @@ class FineTransformerTrainer(nn.Module):
         if force_clear_prev_results is True or (not exists(force_clear_prev_results) and len([*self.results_folder.glob('**/*')]) > 0 and yes_or_no('do you want to clear previous experiment checkpoints and results?')):
             rmtree(str(self.results_folder))
 
+        self.accelerator.wait_for_everyone()
         self.results_folder.mkdir(parents = True, exist_ok = True)
 
         hps = {"num_train_steps": num_train_steps, "data_max_length": data_max_length, "learning_rate": lr}
