@@ -449,6 +449,11 @@ class Transformer(nn.Module):
 
         x = self.grad_shrink(x)
 
+        # turn off kv cache if using conditioning as self attention (as in valle), for now
+
+        if self.cond_as_self_attn_prefix:
+            kv_cache = None
+
         # handle kv cache
 
         new_kv_cache = []
