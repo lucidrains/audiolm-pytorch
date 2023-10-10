@@ -21,7 +21,7 @@ setup(
   install_requires=[
     'accelerate',
     'beartype>=0.16.1',
-    'einops>=0.6.1',
+    'einops>=0.7.0',
     'ema-pytorch>=0.2.2',
     'encodec',
     'fairseq',

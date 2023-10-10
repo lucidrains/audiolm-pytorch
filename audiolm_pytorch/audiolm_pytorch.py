@@ -1946,8 +1946,26 @@ class FineTransformerWrapper(nn.Module):
 
         coarse_and_fine_ids = torch.cat((coarse_token_ids, sampled_fine_token_ids), dim = -1)
 
-        wav = self.codec.decode_from_codebook_indices(coarse_and_fine_ids)
-        return rearrange(wav, 'b 1 n -> b n')
+        # need to handle padding (uneven acoustic token lengths)
+
+        has_any_pad_mask = reduce(coarse_and_fine_ids == self.pad_id, 'b n q -> b n', 'any')
+
+        if not has_any_pad_mask.any():
+            wav = self.codec.decode_from_codebook_indices(coarse_and_fine_ids)
+            return rearrange(wav, 'b 1 n -> b n')
+
+        # naively decode each sample at a time if padding exists
+
+        wavs = []
+
+        for acoustic_ids_with_padding, pad_mask in zip(coarse_and_fine_ids, has_any_pad_mask):
+            acoustic_ids = acoustic_ids_with_padding[~pad_mask]
+            acoustic_ids = rearrange(acoustic_ids, 'n q -> 1 n q')
+            wav = self.codec.decode_from_codebook_indices(acoustic_ids)
+            wav = rearrange(wav, '1 1 n -> n')
+            wavs.append(wav)
+
+        return wavs
 
     def forward(
         self,
