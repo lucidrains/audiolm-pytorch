@@ -17,7 +17,10 @@ from torchaudio.functional import resample
 
 from einops import rearrange, reduce, pack, unpack
 
-from vector_quantize_pytorch import GroupedResidualVQ
+from vector_quantize_pytorch import (
+    GroupedResidualVQ,
+    ResidualLFQ
+)
 
 from local_attention import LocalMHA
 from local_attention.transformer import FeedForward, DynamicPositionBias
@@ -433,6 +436,7 @@ class SoundStream(nn.Module):
         rq_groups = 1,
         rq_stochastic_sample_codes = False,
         rq_kwargs: dict = {},
+        use_lookup_free_quantizer = True,   # proposed in https://arxiv.org/abs/2310.05737, adapted in residual quantization fashion for audio
         input_channels = 1,
         discr_multi_scales = (1, 0.5, 0.25),
         stft_normalized = False,
@@ -513,21 +517,33 @@ class SoundStream(nn.Module):
 
         self.rq_groups = rq_groups
 
-        self.rq = GroupedResidualVQ(
-            dim = codebook_dim,
-            num_quantizers = rq_num_quantizers,
-            codebook_size = codebook_size,
-            groups = rq_groups,
-            decay = rq_ema_decay,
-            commitment_weight = rq_commitment_weight,
-            quantize_dropout_multiple_of = rq_quantize_dropout_multiple_of,
-            kmeans_init = True,
-            threshold_ema_dead_code = 2,
-            quantize_dropout = True,
-            quantize_dropout_cutoff_index = quantize_dropout_cutoff_index,
-            stochastic_sample_codes = rq_stochastic_sample_codes,
-            **rq_kwargs
-        )
+        if use_lookup_free_quantizer:
+            assert rq_groups == 1, 'grouped residual LFQ not implemented yet'
+
+            self.rq = ResidualLFQ(
+                dim = codebook_dim,
+                num_quantizers = rq_num_quantizers,
+                codebook_size = codebook_size,
+                quantize_dropout = True,
+                quantize_dropout_cutoff_index = quantize_dropout_cutoff_index,
+                **rq_kwargs
+            )
+        else:
+            self.rq = GroupedResidualVQ(
+                dim = codebook_dim,
+                num_quantizers = rq_num_quantizers,
+                codebook_size = codebook_size,
+                groups = rq_groups,
+                decay = rq_ema_decay,
+                commitment_weight = rq_commitment_weight,
+                quantize_dropout_multiple_of = rq_quantize_dropout_multiple_of,
+                kmeans_init = True,
+                threshold_ema_dead_code = 2,
+                quantize_dropout = True,
+                quantize_dropout_cutoff_index = quantize_dropout_cutoff_index,
+                stochastic_sample_codes = rq_stochastic_sample_codes,
+                **rq_kwargs
+            )
 
         self.decoder_film = FiLM(codebook_dim, dim_cond = 2)
 

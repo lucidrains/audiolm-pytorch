@@ -67,9 +67,10 @@ from audiolm_pytorch import SoundStream, SoundStreamTrainer
 soundstream = SoundStream(
     codebook_size = 1024,
     rq_num_quantizers = 8,
-    rq_groups = 2,                # this paper proposes using multi-headed residual vector quantization - https://arxiv.org/abs/2305.02765
-    attn_window_size = 128,       # local attention receptive field at bottleneck
-    attn_depth = 2                # 2 local attention transformer blocks - the soundstream folks were not experts with attention, so i took the liberty to add some. encodec went with lstms, but attention should be better
+    rq_groups = 2,                      # this paper proposes using multi-headed residual vector quantization - https://arxiv.org/abs/2305.02765
+    use_lookup_free_quantizer = True,   # whether to use residual lookup free quantization
+    attn_window_size = 128,             # local attention receptive field at bottleneck
+    attn_depth = 2                      # 2 local attention transformer blocks - the soundstream folks were not experts with attention, so i took the liberty to add some. encodec went with lstms, but attention should be better
 )
 
 trainer = SoundStreamTrainer(
@@ -507,5 +508,16 @@ $ accelerate launch train.py
     author  = {Dao, Tri and Fu, Daniel Y. and Ermon, Stefano and Rudra, Atri and R{\'e}, Christopher},
     booktitle = {Advances in Neural Information Processing Systems},
     year    = {2022}
+}
+```
+
+```bibtex
+@misc{yu2023language,
+    title   = {Language Model Beats Diffusion -- Tokenizer is Key to Visual Generation},
+    author  = {Lijun Yu and José Lezama and Nitesh B. Gundavarapu and Luca Versari and Kihyuk Sohn and David Minnen and Yong Cheng and Agrim Gupta and Xiuye Gu and Alexander G. Hauptmann and Boqing Gong and Ming-Hsuan Yang and Irfan Essa and David A. Ross and Lu Jiang},
+    year    = {2023},
+    eprint  = {2310.05737},
+    archivePrefix = {arXiv},
+    primaryClass = {cs.CV}
 }
 ```
