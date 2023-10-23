@@ -19,7 +19,7 @@ from einops import rearrange, reduce, pack, unpack
 
 from vector_quantize_pytorch import (
     GroupedResidualVQ,
-    ResidualLFQ
+    GroupedResidualLFQ
 )
 
 from local_attention import LocalMHA
@@ -518,12 +518,11 @@ class SoundStream(nn.Module):
         self.rq_groups = rq_groups
 
         if use_lookup_free_quantizer:
-            assert rq_groups == 1, 'grouped residual LFQ not implemented yet'
-
-            self.rq = ResidualLFQ(
+            self.rq = GroupedResidualLFQ(
                 dim = codebook_dim,
                 num_quantizers = rq_num_quantizers,
                 codebook_size = codebook_size,
+                groups = rq_groups,
                 quantize_dropout = True,
                 quantize_dropout_cutoff_index = quantize_dropout_cutoff_index,
                 **rq_kwargs
