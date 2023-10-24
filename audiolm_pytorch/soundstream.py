@@ -428,7 +428,7 @@ class SoundStream(nn.Module):
         strides = (2, 4, 5, 8),
         channel_mults = (2, 4, 8, 16),
         codebook_dim = 512,
-        codebook_size = 1024,
+        codebook_size = 4096,
         rq_num_quantizers = 8,
         rq_commitment_weight = 1.,
         rq_ema_decay = 0.95,

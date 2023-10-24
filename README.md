@@ -65,7 +65,7 @@ Otherwise, to stay more true to the original paper, you can use `SoundStream`. F
 from audiolm_pytorch import SoundStream, SoundStreamTrainer
 
 soundstream = SoundStream(
-    codebook_size = 1024,
+    codebook_size = 4096,
     rq_num_quantizers = 8,
     rq_groups = 2,                      # this paper proposes using multi-headed residual vector quantization - https://arxiv.org/abs/2305.02765
     use_lookup_free_quantizer = True,   # whether to use residual lookup free quantization
