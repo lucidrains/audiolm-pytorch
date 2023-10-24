@@ -396,7 +396,16 @@ class LocalTransformer(nn.Module):
 
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                LocalMHA(dim = dim, heads = heads, qk_rmsnorm = True, window_size = window_size, use_rotary_pos_emb = not dynamic_pos_bias, use_xpos = True, **kwargs),
+                LocalMHA(
+                    dim = dim,
+                    heads = heads,
+                    qk_rmsnorm = True,
+                    window_size = window_size,
+                    use_rotary_pos_emb = not dynamic_pos_bias,
+                    gate_values_per_head = True,
+                    use_xpos = True,
+                    **kwargs
+                ),
                 FeedForward(dim = dim)
             ]))
 
@@ -610,7 +619,7 @@ class SoundStream(nn.Module):
         self.adversarial_loss_weight = adversarial_loss_weight
         self.feature_loss_weight = feature_loss_weight
 
-        self.register_buffer('zero', torch.tensor([0.]), persistent = False)
+        self.register_buffer('zero', torch.tensor(0.), persistent = False)
 
     @property
     def device(self):
