@@ -587,6 +587,7 @@ class SemanticTransformerTrainer(nn.Module):
         batch_size,
         audio_conditioner: Optional[AudioConditionerBase] = None,
         dataset: Optional[Dataset] = None,
+        valid_dataset: Optional[Dataset] = None,
         data_max_length = None,
         data_max_length_seconds = None,
         folder = None,
@@ -663,14 +664,17 @@ class SemanticTransformerTrainer(nn.Module):
 
         # split for validation
 
-        if valid_frac > 0:
-            train_size = int((1 - valid_frac) * len(self.ds))
-            valid_size = len(self.ds) - train_size
-            self.ds, self.valid_ds = random_split(self.ds, [train_size, valid_size], generator = torch.Generator().manual_seed(random_split_seed))
-            self.print(f'training with dataset of {len(self.ds)} samples and validating with randomly splitted {len(self.valid_ds)} samples')
-        else:
-            self.valid_ds = self.ds
-            self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
+        self.valid_ds = valid_dataset
+
+        if not exists(self.valid_ds):
+            if valid_frac > 0:
+                train_size = int((1 - valid_frac) * len(self.ds))
+                valid_size = len(self.ds) - train_size
+                self.ds, self.valid_ds = random_split(self.ds, [train_size, valid_size], generator = torch.Generator().manual_seed(random_split_seed))
+                self.print(f'training with dataset of {len(self.ds)} samples and validating with randomly splitted {len(self.valid_ds)} samples')
+            else:
+                self.valid_ds = self.ds
+                self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
 
         assert len(self.ds) >= batch_size, 'dataset must have sufficient samples for training'
         assert len(self.valid_ds) >= batch_size, f'validation dataset must have sufficient number of samples (currently {len(self.valid_ds)}) for training'
@@ -850,6 +854,7 @@ class CoarseTransformerTrainer(nn.Module):
         batch_size,
         audio_conditioner: Optional[AudioConditionerBase] = None,
         dataset: Optional[Dataset] = None,
+        valid_dataset: Optional[Dataset] = None,
         ds_fields: Tuple[str, ...] = ('raw_wave', 'raw_wave_for_codec', 'text'),
         data_max_length = None,
         data_max_length_seconds = None,
@@ -933,14 +938,17 @@ class CoarseTransformerTrainer(nn.Module):
 
         # split for validation
 
-        if valid_frac > 0:
-            train_size = int((1 - valid_frac) * len(self.ds))
-            valid_size = len(self.ds) - train_size
-            self.ds, self.valid_ds = random_split(self.ds, [train_size, valid_size], generator = torch.Generator().manual_seed(random_split_seed))
-            self.print(f'training with dataset of {len(self.ds)} samples and validating with randomly splitted {len(self.valid_ds)} samples')
-        else:
-            self.valid_ds = self.ds
-            self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
+        self.valid_ds = valid_dataset
+
+        if not exists(self.valid_ds):
+            if valid_frac > 0:
+                train_size = int((1 - valid_frac) * len(self.ds))
+                valid_size = len(self.ds) - train_size
+                self.ds, self.valid_ds = random_split(self.ds, [train_size, valid_size], generator = torch.Generator().manual_seed(random_split_seed))
+                self.print(f'training with dataset of {len(self.ds)} samples and validating with randomly splitted {len(self.valid_ds)} samples')
+            else:
+                self.valid_ds = self.ds
+                self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
 
         assert len(self.ds) >= batch_size, 'dataset must have sufficient samples for training'
         assert len(self.valid_ds) >= batch_size, f'validation dataset must have sufficient number of samples (currently {len(self.valid_ds)}) for training'
@@ -1120,6 +1128,7 @@ class FineTransformerTrainer(nn.Module):
         batch_size,
         audio_conditioner: Optional[AudioConditionerBase] = None,
         dataset: Optional[Dataset] = None,
+        valid_dataset: Optional[Dataset] = None,
         data_max_length = None,
         data_max_length_seconds = None,
         dataset_normalize = False,
@@ -1198,14 +1207,17 @@ class FineTransformerTrainer(nn.Module):
 
         # split for validation
 
-        if valid_frac > 0:
-            train_size = int((1 - valid_frac) * len(self.ds))
-            valid_size = len(self.ds) - train_size
-            self.ds, self.valid_ds = random_split(self.ds, [train_size, valid_size], generator = torch.Generator().manual_seed(random_split_seed))
-            self.print(f'training with dataset of {len(self.ds)} samples and validating with randomly splitted {len(self.valid_ds)} samples')
-        else:
-            self.valid_ds = self.ds
-            self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
+        self.valid_dataset = valid_dataset
+
+        if not exists(self.valid_dataset):
+            if valid_frac > 0:
+                train_size = int((1 - valid_frac) * len(self.ds))
+                valid_size = len(self.ds) - train_size
+                self.ds, self.valid_ds = random_split(self.ds, [train_size, valid_size], generator = torch.Generator().manual_seed(random_split_seed))
+                self.print(f'training with dataset of {len(self.ds)} samples and validating with randomly splitted {len(self.valid_ds)} samples')
+            else:
+                self.valid_ds = self.ds
+                self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
 
         assert len(self.ds) >= batch_size, 'dataset must have sufficient samples for training'
         assert len(self.valid_ds) >= batch_size, f'validation dataset must have sufficient number of samples (currently {len(self.valid_ds)}) for training'
