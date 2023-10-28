@@ -96,11 +96,9 @@ Your trained `SoundStream` can then be used as a generic tokenizer for audio
 
 ```python
 
-soundstream.eval()
-
 audio = torch.randn(1, 512 * 320)
 
-codes = soundstream(audio, return_codes_only = True)
+codes = soundstream.tokenize(audio)
 
 # you can now train anything with the codebook ids
 

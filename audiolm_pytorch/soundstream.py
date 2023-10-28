@@ -736,6 +736,11 @@ class SoundStream(nn.Module):
 
         return x, ps
 
+    @torch.no_grad()
+    def tokenize(self, audio):
+        self.eval()
+        return self.forward(audio, return_codes_only = True)
+
     def forward(
         self,
         x,
