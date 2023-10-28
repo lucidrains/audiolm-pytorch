@@ -526,6 +526,8 @@ class SoundStream(nn.Module):
 
         self.rq_groups = rq_groups
 
+        self.use_lookup_free_quantizer = use_lookup_free_quantizer
+
         if use_lookup_free_quantizer:
             self.rq = GroupedResidualLFQ(
                 dim = codebook_dim,
@@ -630,10 +632,12 @@ class SoundStream(nn.Module):
         return pickle.loads(self._configs)
 
     def decode_from_codebook_indices(self, quantized_indices):
-        quantized_indices = rearrange(quantized_indices, 'b n (g q) -> g b n q', g = self.rq_groups)
+        assert quantized_indices.dtype == torch.long
 
-        codes = self.rq.get_codes_from_indices(quantized_indices)
-        x = reduce(codes, 'g q b n d -> b n (g d)', 'sum')
+        if quantized_indices.ndim == 3:
+            quantized_indices = rearrange(quantized_indices, 'b n (g q) -> g b n q', g = self.rq_groups)
+
+        x = self.rq.get_output_from_indices(quantized_indices)
 
         return self.decode(x)
 
@@ -641,7 +645,9 @@ class SoundStream(nn.Module):
         if quantize:
             x, *_ = self.rq(x)
 
-        x = self.decoder_attn(x)
+        if exists(self.decoder_attn):
+            x = self.decoder_attn(x)
+
         x = rearrange(x, 'b n c -> b c n')
         return self.decoder(x)
 
@@ -666,6 +672,7 @@ class SoundStream(nn.Module):
         config = pickle.loads(pkg['config'])
         soundstream = cls(**config)
         soundstream.load(path, strict = strict)
+        soundstream.eval()
         return soundstream
 
     def load(self, path, strict = True):
@@ -735,6 +742,7 @@ class SoundStream(nn.Module):
         target = None,
         is_denoising = None, # if you want to learn film conditioners that teach the soundstream to denoise - target would need to be passed in above
         return_encoded = False,
+        return_codes_only = False,
         return_discr_loss = False,
         return_discr_losses_separately = False,
         return_loss_breakdown = False,
@@ -766,6 +774,9 @@ class SoundStream(nn.Module):
             x = self.encoder_film(x, denoise_input)
 
         x, indices, commit_loss = self.rq(x)
+
+        if return_codes_only:
+            return indices
 
         if return_encoded:
             indices = rearrange(indices, 'g b n q -> b n (g q)')
