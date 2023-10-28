@@ -86,8 +86,32 @@ trainer.train()
 
 # after a lot of training, you can test the autoencoding as so
 
+soundstream.eval() # your soundstream must be in eval mode, to avoid having the residual dropout of the residual VQ necessary for training
+
 audio = torch.randn(10080).cuda()
 recons = soundstream(audio, return_recons_only = True) # (1, 10080) - 1 channel
+```
+
+Your trained `SoundStream` can then be used as a generic tokenizer for audio
+
+```python
+
+soundstream.eval()
+
+audio = torch.randn(1, 512 * 320)
+
+codes = soundstream(audio, return_codes_only = True)
+
+# you can now train anything with the codebook ids
+
+recon_audio_from_codes = soundstream.decode_from_codebook_indices(codes)
+
+# sanity check
+
+assert torch.allclose(
+    recon_audio_from_codes,
+    soundstream(audio, return_recons_only = True)
+)
 ```
 
 You can also use soundstreams that are specific to `AudioLM` and `MusicLM` by importing `AudioLMSoundStream` and `MusicLMSoundStream` respectively
