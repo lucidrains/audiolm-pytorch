@@ -1207,9 +1207,9 @@ class FineTransformerTrainer(nn.Module):
 
         # split for validation
 
-        self.valid_dataset = valid_dataset
+        self.valid_ds = valid_dataset
 
-        if not exists(self.valid_dataset):
+        if not exists(self.valid_ds):
             if valid_frac > 0:
                 train_size = int((1 - valid_frac) * len(self.ds))
                 valid_size = len(self.ds) - train_size
