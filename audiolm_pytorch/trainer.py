@@ -327,6 +327,13 @@ class SoundStreamTrainer(nn.Module):
 
         assert self.accelerator.distributed_type != DistributedType.FSDP, 'FSDP not supported for soundstream trainer due to complex-valued stft discriminator'
 
+    @property
+    def ema_tokenizer(self):
+        return self.ema_soundstream.ema_model
+
+    def tokenize(self, audio):
+        return ema_tokenizer.tokenize(audio)
+
     def set_model_as_ema_model_(self):
         """ this will force the main 'online' model to have same parameters as the exponentially moving averaged model """
         assert self.use_ema
