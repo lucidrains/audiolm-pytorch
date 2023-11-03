@@ -19,7 +19,8 @@ from einops import rearrange, reduce, pack, unpack
 
 from vector_quantize_pytorch import (
     GroupedResidualVQ,
-    GroupedResidualLFQ
+    GroupedResidualLFQ,
+    GroupedResidualFSQ
 )
 
 from local_attention import LocalMHA
@@ -445,7 +446,9 @@ class SoundStream(nn.Module):
         rq_groups = 1,
         rq_stochastic_sample_codes = False,
         rq_kwargs: dict = {},
-        use_lookup_free_quantizer = False,   # proposed in https://arxiv.org/abs/2310.05737, adapted in residual quantization fashion for audio
+        use_lookup_free_quantizer = False,              # proposed in https://arxiv.org/abs/2310.05737, adapted for residual quantization
+        use_finite_scalar_quantizer = False,            # proposed in https://arxiv.org/abs/2309.15505, adapted for residual quantization
+        finite_scalar_quantizer_levels = [8, 5, 5, 5],
         input_channels = 1,
         discr_multi_scales = (1, 0.5, 0.25),
         stft_normalized = False,
@@ -526,9 +529,13 @@ class SoundStream(nn.Module):
 
         self.rq_groups = rq_groups
 
+        assert not (use_lookup_free_quantizer and use_finite_scalar_quantizer)
+
         self.use_lookup_free_quantizer = use_lookup_free_quantizer
+        self.use_finite_scalar_quantizer = use_finite_scalar_quantizer
 
         if use_lookup_free_quantizer:
+
             self.rq = GroupedResidualLFQ(
                 dim = codebook_dim,
                 num_quantizers = rq_num_quantizers,
@@ -538,7 +545,19 @@ class SoundStream(nn.Module):
                 quantize_dropout_cutoff_index = quantize_dropout_cutoff_index,
                 **rq_kwargs
             )
+        elif use_finite_scalar_quantizer:
+
+            self.rq = GroupedResidualFSQ(
+                dim = codebook_dim,
+                levels = finite_scalar_quantizer_levels,
+                num_quantizers = rq_num_quantizers,
+                groups = rq_groups,
+                quantize_dropout = True,
+                quantize_dropout_cutoff_index = quantize_dropout_cutoff_index,
+                **rq_kwargs
+            )
         else:
+
             self.rq = GroupedResidualVQ(
                 dim = codebook_dim,
                 num_quantizers = rq_num_quantizers,
@@ -778,7 +797,13 @@ class SoundStream(nn.Module):
             denoise_input = torch.tensor([is_denoising, not is_denoising], dtype = x.dtype, device = self.device) # [1, 0] for denoise, [0, 1] for not denoising
             x = self.encoder_film(x, denoise_input)
 
-        x, indices, commit_loss = self.rq(x)
+        if not self.use_finite_scalar_quantizer:
+            x, indices, commit_loss = self.rq(x)
+        else:
+            # finite scalar quantizer does not have any aux loss
+
+            x, indices = self.rq(x)
+            commit_loss = self.zero
 
         if return_codes_only:
             return indices
