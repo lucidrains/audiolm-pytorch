@@ -69,7 +69,7 @@ soundstream = SoundStream(
     rq_num_quantizers = 8,
     rq_groups = 2,                      # this paper proposes using multi-headed residual vector quantization - https://arxiv.org/abs/2305.02765
     use_lookup_free_quantizer = False,  # whether to use residual lookup free quantization
-    use_finite_scalar_quantizer = True, # whether to use finite scalar quantization
+    use_finite_scalar_quantizer = True, # whether to use residual finite scalar quantization
     attn_window_size = 128,             # local attention receptive field at bottleneck
     attn_depth = 2                      # 2 local attention transformer blocks - the soundstream folks were not experts with attention, so i took the liberty to add some. encodec went with lstms, but attention should be better
 )
