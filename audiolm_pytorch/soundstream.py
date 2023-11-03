@@ -445,7 +445,7 @@ class SoundStream(nn.Module):
         rq_groups = 1,
         rq_stochastic_sample_codes = False,
         rq_kwargs: dict = {},
-        use_lookup_free_quantizer = True,   # proposed in https://arxiv.org/abs/2310.05737, adapted in residual quantization fashion for audio
+        use_lookup_free_quantizer = False,   # proposed in https://arxiv.org/abs/2310.05737, adapted in residual quantization fashion for audio
         input_channels = 1,
         discr_multi_scales = (1, 0.5, 0.25),
         stft_normalized = False,
