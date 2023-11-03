@@ -42,7 +42,7 @@ class SoundDataset(Dataset):
     ):
         super().__init__()
         path = Path(folder)
-        assert path.exists(), 'folder does not exist'
+        assert path.exists(), f'folder "{str(path)}" does not exist'
 
         files = [file for ext in exts for file in path.glob(f'**/*.{ext}')]
         assert len(files) > 0, 'no sound files found'

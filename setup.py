@@ -19,7 +19,7 @@ setup(
     'audio generation'
   ],
   install_requires=[
-    'accelerate',
+    'accelerate>=0.24.0',
     'beartype>=0.16.1',
     'einops>=0.7.0',
     'ema-pytorch>=0.2.2',

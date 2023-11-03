@@ -6,6 +6,7 @@ from random import choice
 from pathlib import Path
 from shutil import rmtree
 from collections import Counter
+from contextlib import contextmanager
 
 from beartype.typing import Union, List, Optional, Tuple
 from typing_extensions import Annotated
@@ -47,6 +48,7 @@ from packaging import version
 
 from accelerate import Accelerator, DistributedType
 from accelerate.utils import DistributedDataParallelKwargs, InitProcessGroupKwargs
+from accelerate.tracking import WandBTracker
 
 # constants
 
@@ -82,8 +84,17 @@ DATASET_FIELD_TYPE_CONFIG = dict(
 def exists(val):
     return val is not None
 
+def default(val, d):
+    return val if exists(val) else d
+
 def noop(*args, **kwargs):
     pass
+
+def find_first(cond, arr):
+    for el in arr:
+        if cond(el):
+            return el
+    return None
 
 def cycle(dl):
     while True:
@@ -178,6 +189,7 @@ class SoundStreamTrainer(nn.Module):
         dataloader_drop_last = True,
         split_batches = False,
         use_lion: bool = False,
+        use_wandb_tracking = False,
         force_clear_prev_results: bool = None  # set to True | False to skip the prompt
     ):
         """
@@ -187,11 +199,16 @@ class SoundStreamTrainer(nn.Module):
         super().__init__()
         check_one_trainer()
 
-        if accelerator:
-            self.accelerator = accelerator
-            assert len(accelerate_kwargs) == 0
-        else:
+        self.accelerator = accelerator
+        assert not (exists(accelerator) and len(accelerate_kwargs) > 0)
+
+        self.use_wandb_tracking = use_wandb_tracking
+
+        if not exists(self.accelerator):
             init_process_kwargs = InitProcessGroupKwargs(timeout = timedelta(seconds = init_process_group_timeout_seconds))
+
+            if use_wandb_tracking:
+                accelerate_kwargs.update(log_with = 'wandb')
 
             self.accelerator = Accelerator(
                 kwargs_handlers = [DEFAULT_DDP_KWARGS, init_process_kwargs],
@@ -205,7 +222,7 @@ class SoundStreamTrainer(nn.Module):
         if self.use_ema:
             self.ema_soundstream = EMA(soundstream, beta = ema_beta, update_after_step = ema_update_after_step, update_every = ema_update_every)
 
-        self.register_buffer('steps', torch.Tensor([0]))
+        self.register_buffer('steps', torch.tensor(0))
 
         self.num_train_steps = num_train_steps
         self.batch_size = batch_size
@@ -320,10 +337,9 @@ class SoundStreamTrainer(nn.Module):
         self.accelerator.wait_for_everyone()
         self.results_folder.mkdir(parents = True, exist_ok = True)
 
-        # Initialize experiment trackers if an external Accelerator is not passed in
+        # save tracker hyperparameters
 
-        if not accelerator:
-            self.accelerator.init_trackers("soundstream", config=hyperparameters)        
+        self.tracker_hps = hyperparameters
 
         assert self.accelerator.distributed_type != DistributedType.FSDP, 'FSDP not supported for soundstream trainer due to complex-valued stft discriminator'
 
@@ -409,6 +425,27 @@ class SoundStreamTrainer(nn.Module):
 
     def print(self, msg):
         self.accelerator.print(msg)
+
+    def log(self, **logs_as_kwargs):
+        self.accelerator.log(logs_as_kwargs, step = self.steps.item())
+
+    @contextmanager
+    def wandb_tracker(self, project, run = None, hps = None):
+        assert self.use_wandb_tracking, '`use_wandb_tracking` must be set to True on SoundStreamTrainer'
+
+        hps = default(hps, self.tracker_hps)
+
+        self.accelerator.init_trackers(project, config = None)
+
+        if exists(run):
+            wandb_tracker = find_first(lambda el: isinstance(el, WandBTracker), self.accelerator.trackers)
+            assert exists(wandb_tracker)
+
+            wandb_tracker.name = run
+
+        yield
+
+        self.accelerator.end_training()
 
     @property
     def device(self):
@@ -503,16 +540,9 @@ class SoundStreamTrainer(nn.Module):
         # build pretty printed losses
 
         losses_str = f"{steps}: soundstream total loss: {logs['loss']:.3f}, soundstream recon loss: {logs['recon_loss']:.3f}"
+
         if log_losses:
-            self.accelerator.log({
-                "total_loss": logs['loss'],
-                "recon_loss": logs['recon_loss'],
-                "multi_spectral_recon_loss": logs['multi_spectral_recon_loss'],
-                "adversarial_loss": logs['adversarial_loss'],
-                "feature_loss": logs['feature_loss'],
-                "all_commitment_loss": logs['all_commitment_loss'],
-                "stft_discr_loss": logs['stft']
-            }, step=steps)
+            self.log(**logs)
 
         for key, loss in logs.items():
             if not key.startswith('scale:'):
@@ -520,8 +550,9 @@ class SoundStreamTrainer(nn.Module):
             _, scale_factor = key.split(':')
 
             losses_str += f" | discr (scale {scale_factor}) loss: {loss:.3f}"
+
             if log_losses:
-                self.accelerator.log({f"discr_loss (scale {scale_factor})": loss}, step=steps)
+                self.log(**{f"discr_loss (scale {scale_factor})": loss})
 
         # log
 
@@ -570,7 +601,7 @@ class SoundStreamTrainer(nn.Module):
 
         self.accelerator.wait_for_everyone()
 
-        self.steps += 1
+        self.steps.add_(1)
         return logs
 
     def train(self, log_fn = noop):
@@ -635,7 +666,7 @@ class SemanticTransformerTrainer(nn.Module):
             audio_conditioner = audio_conditioner
         )
 
-        self.register_buffer('steps', torch.Tensor([0]))
+        self.register_buffer('steps', torch.tensor(0))
 
         self.num_train_steps = num_train_steps
         self.batch_size = batch_size
@@ -836,7 +867,7 @@ class SemanticTransformerTrainer(nn.Module):
 
         self.accelerator.wait_for_everyone()
 
-        self.steps += 1
+        self.steps.add_(1)
         return logs
 
     def train(self, log_fn = noop):
@@ -905,7 +936,7 @@ class CoarseTransformerTrainer(nn.Module):
             audio_conditioner = audio_conditioner
         )
 
-        self.register_buffer('steps', torch.Tensor([0]))
+        self.register_buffer('steps', torch.tensor(0))
 
         self.num_train_steps = num_train_steps
         self.batch_size = batch_size
@@ -1111,7 +1142,7 @@ class CoarseTransformerTrainer(nn.Module):
 
         self.accelerator.wait_for_everyone()
 
-        self.steps += 1
+        self.steps.add_(1)
         return logs
 
     def train(self, log_fn = noop):
@@ -1177,7 +1208,7 @@ class FineTransformerTrainer(nn.Module):
             audio_conditioner = audio_conditioner
         )
 
-        self.register_buffer('steps', torch.Tensor([0]))
+        self.register_buffer('steps', torch.tensor(0))
 
         self.num_train_steps = num_train_steps
         self.batch_size = batch_size
@@ -1379,7 +1410,7 @@ class FineTransformerTrainer(nn.Module):
 
         self.accelerator.wait_for_everyone()
 
-        self.steps += 1
+        self.steps.add_(1)
         return logs
 
     def train(self, log_fn = noop):

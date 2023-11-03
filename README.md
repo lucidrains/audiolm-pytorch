@@ -130,6 +130,23 @@ from audiolm_pytorch import SoundStream
 soundstream = SoundStream.init_and_load_from('./path/to/checkpoint.pt')
 ```
 
+To use <a href="https://wandb.ai">Weights & Biases</a> tracking, first set `use_wandb_tracking = True` on the `SoundStreamTrainer`, then do the following
+
+```python
+
+trainer = SoundStreamTrainer(
+    soundstream,
+    ...,
+    use_wandb_tracking = True
+)
+
+# wrap .train() with contextmanager, specifying project and run name
+
+with trainer.wandb_tracker(project = 'soundstream', run = 'baseline'):
+    trainer.train()
+
+```
+
 ### Hierarchical Transformers
 
 Then three separate transformers (`SemanticTransformer`, `CoarseTransformer`, `FineTransformer`) need to be trained
