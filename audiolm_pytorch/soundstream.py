@@ -525,7 +525,6 @@ class SoundStream(nn.Module):
         self.num_quantizers = rq_num_quantizers
 
         self.codebook_dim = codebook_dim
-        self.codebook_size = codebook_size
 
         self.rq_groups = rq_groups
 
@@ -545,6 +544,9 @@ class SoundStream(nn.Module):
                 quantize_dropout_cutoff_index = quantize_dropout_cutoff_index,
                 **rq_kwargs
             )
+
+            self.codebook_size = codebook_size
+
         elif use_finite_scalar_quantizer:
 
             self.rq = GroupedResidualFSQ(
@@ -556,6 +558,8 @@ class SoundStream(nn.Module):
                 quantize_dropout_cutoff_index = quantize_dropout_cutoff_index,
                 **rq_kwargs
             )
+
+            self.codebook_size = self.rq.codebook_size
         else:
 
             self.rq = GroupedResidualVQ(
@@ -573,6 +577,8 @@ class SoundStream(nn.Module):
                 stochastic_sample_codes = rq_stochastic_sample_codes,
                 **rq_kwargs
             )
+
+            self.codebook_size = codebook_size
 
         self.decoder_film = FiLM(codebook_dim, dim_cond = 2)
 
@@ -651,7 +657,7 @@ class SoundStream(nn.Module):
         return pickle.loads(self._configs)
 
     def decode_from_codebook_indices(self, quantized_indices):
-        assert quantized_indices.dtype == torch.long
+        assert quantized_indices.dtype in (torch.long, torch.int32)
 
         if quantized_indices.ndim == 3:
             quantized_indices = rearrange(quantized_indices, 'b n (g q) -> g b n q', g = self.rq_groups)
