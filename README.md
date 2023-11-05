@@ -299,7 +299,7 @@ semantic_transformer = SemanticTransformer(
     cond_as_self_attn_prefix = True     # whether to condition as prefix to self attention, instead of cross attention, as was done in 'VALL-E' paper
 ).cuda()
 
-# mock text video dataset (as an example)
+# mock text audio dataset (as an example)
 
 # you will have to extend your own from `Dataset`, and return an audio tensor as well as a string (the audio description) in any order (the framework will autodetect and route it into the transformer)
 
