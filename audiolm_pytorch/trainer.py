@@ -441,7 +441,7 @@ class SoundStreamTrainer(nn.Module):
             wandb_tracker = find_first(lambda el: isinstance(el, WandBTracker), self.accelerator.trackers)
             assert exists(wandb_tracker)
 
-            wandb_tracker.name = run
+            wandb_tracker.run.name = run
 
         yield
 
