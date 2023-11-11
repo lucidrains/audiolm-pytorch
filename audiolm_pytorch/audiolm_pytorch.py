@@ -1684,7 +1684,7 @@ class CoarseTransformerWrapper(nn.Module):
 
             coarse_sample_without_padding = rearrange(coarse_sample_without_padding, '... -> 1 ...')
 
-            wav = encodec.decode_from_codebook_indices(coarse_sample_without_padding)
+            wav = self.codec.decode_from_codebook_indices(coarse_sample_without_padding)
             wav = rearrange(wav, '1 1 n -> n')
 
             wavs.append(wav)
