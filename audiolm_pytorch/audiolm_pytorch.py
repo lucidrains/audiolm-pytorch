@@ -1665,8 +1665,31 @@ class CoarseTransformerWrapper(nn.Module):
 
         assert exists(self.codec)
 
-        wav = self.codec.decode_from_codebook_indices(sampled_coarse_token_ids)
-        return rearrange(wav, 'b 1 n -> b n')
+        coarse_tokens_are_variable_lengthed = (sampled_coarse_token_ids == -1).any()
+
+        if not coarse_tokens_are_variable_lengthed:
+            wav = self.codec.decode_from_codebook_indices(sampled_coarse_token_ids)
+            return rearrange(wav, 'b 1 n -> b n')
+
+        # handle variable lengthed coarse tokens
+
+        wavs = []
+        for coarse_sample in sampled_coarse_token_ids:
+            has_padding = reduce(coarse_sample == -1, 'n q -> n', 'any')
+            coarse_sample_without_padding = coarse_sample[~has_padding]
+
+            if has_padding.all():
+                wavs.append(None)
+                continue
+
+            coarse_sample_without_padding = rearrange(coarse_sample_without_padding, '... -> 1 ...')
+
+            wav = encodec.decode_from_codebook_indices(coarse_sample_without_padding)
+            wav = rearrange(wav, '1 1 n -> n')
+
+            wavs.append(wav)
+
+        return wavs
 
     def forward(
         self,
