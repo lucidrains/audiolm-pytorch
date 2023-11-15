@@ -732,7 +732,8 @@ class SoundStream(nn.Module):
             *(self.encoder_attn.parameters() if exists(self.encoder_attn) else []),
             *(self.decoder_attn.parameters() if exists(self.decoder_attn) else []),
             *self.encoder_film.parameters(),
-            *self.decoder_film.parameters()
+            *self.decoder_film.parameters(),
+            *self.rq.parameters()
         ]
 
     @property
