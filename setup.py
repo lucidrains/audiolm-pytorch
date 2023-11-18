@@ -25,6 +25,7 @@ setup(
     'ema-pytorch>=0.2.2',
     'encodec',
     'fairseq',
+    'gateloop-transformer>=0.0.24',
     'joblib',
     'local-attention>=1.9.0',
     'scikit-learn',

@@ -6,6 +6,7 @@ from typing import Optional
 
 import torch
 from torch import nn, einsum
+from torch.nn import Module, ModuleList
 from torch.autograd import grad as torch_grad
 import torch.nn.functional as F
 from torch.linalg import vector_norm
@@ -23,6 +24,8 @@ from vector_quantize_pytorch import (
 
 from local_attention import LocalMHA
 from local_attention.transformer import FeedForward, DynamicPositionBias
+
+from gateloop_transformer import SimpleGateLoopLayer as GateLoop
 
 from audiolm_pytorch.utils import curtail_to_multiple
 
@@ -85,7 +88,7 @@ def Sequential(*mods):
 
 # discriminators
 
-class MultiScaleDiscriminator(nn.Module):
+class MultiScaleDiscriminator(Module):
     def __init__(
         self,
         channels = 16,
@@ -96,7 +99,7 @@ class MultiScaleDiscriminator(nn.Module):
     ):
         super().__init__()
         self.init_conv = nn.Conv1d(input_channels, channels, 15, padding = 7)
-        self.conv_layers = nn.ModuleList([])
+        self.conv_layers = ModuleList([])
 
         curr_channels = channels
 
@@ -138,7 +141,7 @@ class MultiScaleDiscriminator(nn.Module):
 # autoregressive squeeze excitation
 # https://arxiv.org/abs/1709.01507
 
-class SqueezeExcite(nn.Module):
+class SqueezeExcite(Module):
     def __init__(self, dim, reduction_factor = 4, dim_minimum = 8):
         super().__init__()
         dim_inner = max(dim_minimum, dim // reduction_factor)
@@ -166,7 +169,7 @@ class SqueezeExcite(nn.Module):
 
 # complex stft discriminator
 
-class ModReLU(nn.Module):
+class ModReLU(Module):
     """
     https://arxiv.org/abs/1705.09792
     https://github.com/pytorch/pytorch/issues/47052#issuecomment-718948801
@@ -178,7 +181,7 @@ class ModReLU(nn.Module):
     def forward(self, x):
         return F.relu(torch.abs(x) + self.b) * torch.exp(1.j * torch.angle(x))
 
-class ComplexConv2d(nn.Module):
+class ComplexConv2d(Module):
     def __init__(
         self,
         dim,
@@ -214,7 +217,7 @@ def ComplexSTFTResidualUnit(chan_in, chan_out, strides):
         ComplexConv2d(chan_in, chan_out, kernel_sizes, stride = strides, padding = paddings)
     )
 
-class ComplexSTFTDiscriminator(nn.Module):
+class ComplexSTFTDiscriminator(Module):
     def __init__(
         self,
         *,
@@ -237,7 +240,7 @@ class ComplexSTFTDiscriminator(nn.Module):
 
         curr_channels = channels
 
-        self.layers = nn.ModuleList([])
+        self.layers = ModuleList([])
 
         for layer_stride, (chan_in, chan_out) in zip(strides, layer_channels_pairs):
             self.layers.append(ComplexSTFTResidualUnit(chan_in, chan_out, layer_stride))
@@ -301,15 +304,25 @@ class ComplexSTFTDiscriminator(nn.Module):
 
 # sound stream
 
-class Residual(nn.Module):
-    def __init__(self, fn):
+class Residual(Module):
+    def __init__(self, fn: Module):
         super().__init__()
         self.fn = fn
 
     def forward(self, x, **kwargs):
         return self.fn(x, **kwargs) + x
 
-class CausalConv1d(nn.Module):
+class ChannelTranspose(Module):
+    def __init__(self, fn: Module):
+        super().__init__()
+        self.fn = fn
+
+    def forward(self, x, **kwargs):
+        x = rearrange(x, 'b c n -> b n c')
+        out = self.fn(x, **kwargs) + x
+        return rearrange(out, 'b n c -> b c n')
+
+class CausalConv1d(Module):
     def __init__(self, chan_in, chan_out, kernel_size, pad_mode = 'reflect', **kwargs):
         super().__init__()
         kernel_size = kernel_size
@@ -324,7 +337,7 @@ class CausalConv1d(nn.Module):
         x = F.pad(x, (self.causal_padding, 0), mode = self.pad_mode)
         return self.conv(x)
 
-class CausalConvTranspose1d(nn.Module):
+class CausalConvTranspose1d(Module):
     def __init__(self, chan_in, chan_out, kernel_size, stride, **kwargs):
         super().__init__()
         self.upsample_factor = stride
@@ -374,7 +387,7 @@ def DecoderBlock(chan_in, chan_out, stride, cycle_dilations = (1, 3, 9), squeeze
         residual_unit(chan_out, chan_out, next(it)),
     )
 
-class LocalTransformer(nn.Module):
+class LocalTransformer(Module):
     def __init__(
         self,
         *,
@@ -387,14 +400,14 @@ class LocalTransformer(nn.Module):
     ):
         super().__init__()
         self.window_size = window_size
-        self.layers = nn.ModuleList([])
+        self.layers = ModuleList([])
 
         self.pos_bias = None
         if dynamic_pos_bias:
             self.pos_bias = DynamicPositionBias(dim = dim // 2, heads = heads)
 
         for _ in range(depth):
-            self.layers.append(nn.ModuleList([
+            self.layers.append(ModuleList([
                 LocalMHA(
                     dim = dim,
                     heads = heads,
@@ -419,7 +432,7 @@ class LocalTransformer(nn.Module):
 
         return x
 
-class FiLM(nn.Module):
+class FiLM(Module):
     def __init__(self, dim, dim_cond):
         super().__init__()
         self.to_cond = nn.Linear(dim_cond, dim * 2)
@@ -428,7 +441,7 @@ class FiLM(nn.Module):
         gamma, beta = self.to_cond(cond).chunk(2, dim = -1)
         return x * gamma + beta
 
-class SoundStream(nn.Module):
+class SoundStream(Module):
     def __init__(
         self,
         *,
@@ -468,10 +481,11 @@ class SoundStream(nn.Module):
         attn_depth = 1,
         attn_xpos_scale_base = None,
         attn_dynamic_pos_bias = False,
+        use_gate_loop_layers = False,
         squeeze_excite = False,
         complex_stft_discr_logits_abs = True,
         pad_mode = 'reflect',
-        stft_discriminator: Optional[nn.Module] = None  # can pass in own stft discriminator
+        stft_discriminator: Optional[Module] = None  # can pass in own stft discriminator
     ):
         super().__init__()
 
@@ -497,6 +511,9 @@ class SoundStream(nn.Module):
 
         for ((chan_in, chan_out), layer_stride) in zip(chan_in_out_pairs, strides):
             encoder_blocks.append(EncoderBlock(chan_in, chan_out, layer_stride, enc_cycle_dilations, squeeze_excite, pad_mode))
+
+            if use_gate_loop_layers:
+                encoder_blocks.append(Residual(ChannelTranspose(GateLoop(chan_out))))
 
         self.encoder = nn.Sequential(
             CausalConv1d(input_channels, channels, 7, pad_mode = pad_mode),
@@ -587,6 +604,9 @@ class SoundStream(nn.Module):
         for ((chan_in, chan_out), layer_stride) in zip(reversed(chan_in_out_pairs), reversed(strides)):
             decoder_blocks.append(DecoderBlock(chan_out, chan_in, layer_stride, dec_cycle_dilations, squeeze_excite, pad_mode))
 
+            if use_gate_loop_layers:
+                decoder_blocks.append(Residual(ChannelTranspose(GateLoop(chan_in))))
+
         self.decoder = nn.Sequential(
             CausalConv1d(codebook_dim, layer_channels[-1], 7, pad_mode = pad_mode),
             *decoder_blocks,
@@ -596,9 +616,9 @@ class SoundStream(nn.Module):
         # discriminators
 
         self.discr_multi_scales = discr_multi_scales
-        self.discriminators = nn.ModuleList([MultiScaleDiscriminator() for _ in range(len(discr_multi_scales))])
+        self.discriminators = ModuleList([MultiScaleDiscriminator() for _ in range(len(discr_multi_scales))])
         discr_rel_factors = [int(s1 / s2) for s1, s2 in zip(discr_multi_scales[:-1], discr_multi_scales[1:])]
-        self.downsamples = nn.ModuleList([nn.Identity()] + [nn.AvgPool1d(2 * factor, stride = factor, padding = factor) for factor in discr_rel_factors])
+        self.downsamples = ModuleList([nn.Identity()] + [nn.AvgPool1d(2 * factor, stride = factor, padding = factor) for factor in discr_rel_factors])
 
         self.stft_discriminator = stft_discriminator
 
@@ -610,7 +630,7 @@ class SoundStream(nn.Module):
 
         # multi spectral reconstruction
 
-        self.mel_spec_transforms = nn.ModuleList([])
+        self.mel_spec_transforms = ModuleList([])
         self.mel_spec_recon_alphas = []
 
         num_transforms = len(multi_spectral_window_powers_of_two)
