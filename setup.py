@@ -26,7 +26,6 @@ setup(
     'encodec',
     'fairseq',
     'joblib',
-    'lion-pytorch',
     'local-attention>=1.9.0',
     'scikit-learn',
     'sentencepiece',

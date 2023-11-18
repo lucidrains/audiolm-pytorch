@@ -189,7 +189,6 @@ class SoundStreamTrainer(nn.Module):
         init_process_group_timeout_seconds = 1800,
         dataloader_drop_last = True,
         split_batches = False,
-        use_lion: bool = False,
         use_wandb_tracking = False,
         force_clear_prev_results: bool = None  # set to True | False to skip the prompt
     ):
@@ -245,7 +244,7 @@ class SoundStreamTrainer(nn.Module):
             one_multiscale_discr_optimizer = get_optimizer(discr.parameters(), lr = lr, wd = wd)
             setattr(self, discr_optimizer_key, one_multiscale_discr_optimizer)
 
-        self.discr_optim = get_optimizer(soundstream.stft_discriminator.parameters(), lr = lr, wd = wd, use_lion = use_lion)
+        self.discr_optim = get_optimizer(soundstream.stft_discriminator.parameters(), lr = lr, wd = wd)
 
         # max grad norm
 
