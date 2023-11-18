@@ -229,6 +229,7 @@ class ComplexSTFTDiscriminator(Module):
         hop_length = 256,
         win_length = 1024,
         stft_normalized = False,
+        stft_window_fn = torch.hann_window,
         logits_abs = True
     ):
         super().__init__()
@@ -250,12 +251,14 @@ class ComplexSTFTDiscriminator(Module):
         # stft settings
 
         self.stft_normalized = stft_normalized
+        self.stft_window_fn = stft_window_fn
 
         self.n_fft = n_fft
         self.hop_length = hop_length
         self.win_length = win_length
 
         # how to output the logits into real space
+
         self.logits_abs = logits_abs
 
     def forward(self, x, return_intermediates = False):
@@ -274,6 +277,7 @@ class ComplexSTFTDiscriminator(Module):
             self.n_fft,
             hop_length = self.hop_length,
             win_length = self.win_length,
+            window = self.stft_window_fn(self.win_length),
             normalized = self.stft_normalized,
             return_complex = True
         )
@@ -485,7 +489,8 @@ class SoundStream(Module):
         squeeze_excite = False,
         complex_stft_discr_logits_abs = True,
         pad_mode = 'reflect',
-        stft_discriminator: Optional[Module] = None  # can pass in own stft discriminator
+        stft_discriminator: Optional[Module] = None,  # can pass in own stft discriminator
+        complex_stft_discr_kwargs: dict = dict()
     ):
         super().__init__()
 
@@ -625,7 +630,8 @@ class SoundStream(Module):
         if not exists(self.stft_discriminator):
             self.stft_discriminator = ComplexSTFTDiscriminator(
                 stft_normalized = stft_normalized,
-                logits_abs = complex_stft_discr_logits_abs  # whether to output as abs() or use view_as_real
+                logits_abs = complex_stft_discr_logits_abs,  # whether to output as abs() or use view_as_real
+                **complex_stft_discr_kwargs
             )
 
         # multi spectral reconstruction
