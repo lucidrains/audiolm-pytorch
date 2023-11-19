@@ -272,12 +272,14 @@ class ComplexSTFTDiscriminator(Module):
         H = 256 samples
         '''
 
+        stft_window = self.stft_window_fn(self.win_length, device = x.device)
+
         x = torch.stft(
             x,
             self.n_fft,
             hop_length = self.hop_length,
             win_length = self.win_length,
-            window = self.stft_window_fn(self.win_length),
+            window = stft_window,
             normalized = self.stft_normalized,
             return_complex = True
         )
