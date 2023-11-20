@@ -488,6 +488,7 @@ class SoundStream(Module):
         attn_xpos_scale_base = None,
         attn_dynamic_pos_bias = False,
         use_gate_loop_layers = False,
+        gate_loop_use_jax = False,
         squeeze_excite = False,
         complex_stft_discr_logits_abs = True,
         pad_mode = 'reflect',
@@ -520,7 +521,7 @@ class SoundStream(Module):
             encoder_blocks.append(EncoderBlock(chan_in, chan_out, layer_stride, enc_cycle_dilations, squeeze_excite, pad_mode))
 
             if use_gate_loop_layers:
-                encoder_blocks.append(Residual(ChannelTranspose(GateLoop(chan_out))))
+                encoder_blocks.append(Residual(ChannelTranspose(GateLoop(chan_out, use_jax_associative_scan = gate_loop_use_jax))))
 
         self.encoder = nn.Sequential(
             CausalConv1d(input_channels, channels, 7, pad_mode = pad_mode),
