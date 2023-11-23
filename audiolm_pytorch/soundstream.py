@@ -2,7 +2,7 @@ import functools
 from pathlib import Path
 from functools import partial, wraps
 from itertools import cycle, zip_longest
-from typing import Optional
+from typing import Optional, List
 
 import torch
 from torch import nn, einsum
@@ -455,7 +455,8 @@ class SoundStream(Module):
         strides = (2, 4, 5, 8),
         channel_mults = (2, 4, 8, 16),
         codebook_dim = 512,
-        codebook_size = 4096,
+        codebook_size: Optional[int] = None,
+        finite_scalar_quantizer_levels: Optional[List[int]] = None,
         rq_num_quantizers = 8,
         rq_commitment_weight = 1.,
         rq_ema_decay = 0.95,
@@ -465,7 +466,6 @@ class SoundStream(Module):
         rq_kwargs: dict = {},
         use_lookup_free_quantizer = False,              # proposed in https://arxiv.org/abs/2310.05737, adapted for residual quantization
         use_finite_scalar_quantizer = False,            # proposed in https://arxiv.org/abs/2309.15505, adapted for residual quantization
-        finite_scalar_quantizer_levels = [8, 5, 5, 5],
         input_channels = 1,
         discr_multi_scales = (1, 0.5, 0.25),
         stft_normalized = False,
@@ -557,6 +557,7 @@ class SoundStream(Module):
         self.use_finite_scalar_quantizer = use_finite_scalar_quantizer
 
         if use_lookup_free_quantizer:
+            assert exists(codebook_size) and not exists(finite_scalar_quantizer_levels), 'if use_finite_scalar_quantizer is set to False, `codebook_size` must be set (and not `finite_scalar_quantizer_levels`)'
 
             self.rq = GroupedResidualLFQ(
                 dim = codebook_dim,
@@ -571,6 +572,7 @@ class SoundStream(Module):
             self.codebook_size = codebook_size
 
         elif use_finite_scalar_quantizer:
+            assert not exists(codebook_size) and exists(finite_scalar_quantizer_levels), 'if use_finite_scalar_quantizer is set to True, `finite_scalar_quantizer_levels` must be set (and not `codebook_size`). the effective codebook size is the cumulative product of all the FSQ levels'
 
             self.rq = GroupedResidualFSQ(
                 dim = codebook_dim,
@@ -583,8 +585,9 @@ class SoundStream(Module):
             )
 
             self.codebook_size = self.rq.codebook_size
-        else:
 
+        else:
+            assert exists(codebook_size) and not exists(finite_scalar_quantizer_levels), 'if use_finite_scalar_quantizer is set to False, `codebook_size` must be set (and not `finite_scalar_quantizer_levels`)'
             self.rq = GroupedResidualVQ(
                 dim = codebook_dim,
                 num_quantizers = rq_num_quantizers,
