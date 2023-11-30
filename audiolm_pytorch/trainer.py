@@ -536,6 +536,7 @@ class SoundStreamTrainer(nn.Module):
                     accum_log(logs, {name: discr_loss.item() / self.grad_accum_every})
 
         if exists(self.discr_max_grad_norm):
+            self.accelerator.clip_grad_norm_(self.soundstream.discriminators.parameters(), self.discr_max_grad_norm)
             self.accelerator.clip_grad_norm_(self.soundstream.stft_discriminator.parameters(), self.discr_max_grad_norm)
 
         # gradient step for all discriminators
