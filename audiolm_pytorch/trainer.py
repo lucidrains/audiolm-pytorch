@@ -165,6 +165,8 @@ class SoundStreamTrainer(nn.Module):
         data_max_length: int = None,
         data_max_length_seconds: Union[int, float] = None,
         folder: str = None,
+        dataset: Optional[Dataset] = None,
+        val_dataset: Optional[Dataset] = None,
         train_dataloader: Optional[DataLoader] = None,
         val_dataloader: Optional[DataLoader] = None,
         lr: float = 2e-4,
@@ -251,12 +253,9 @@ class SoundStreamTrainer(nn.Module):
         self.max_grad_norm = max_grad_norm
         self.discr_max_grad_norm = discr_max_grad_norm
 
-        if not exists(folder):
-            assert exists(train_dataloader)
-            assert exists(val_dataloader)
-            self.dl = train_dataloader
-            self.valid_dl = val_dataloader
-        else:
+        if exists(folder):
+            assert not exists(dataset)
+            assert not exists(val_dataset)
             assert not exists(train_dataloader)
             assert not exists(val_dataloader)
 
@@ -270,7 +269,7 @@ class SoundStreamTrainer(nn.Module):
 
             hyperparameters['data_max_length'] = data_max_length
 
-            self.ds = SoundDataset(
+            dataset = SoundDataset(
                 folder,
                 max_length = data_max_length,
                 target_sample_hz = soundstream.target_sample_hz,
@@ -282,20 +281,30 @@ class SoundStreamTrainer(nn.Module):
             if valid_frac > 0:
                 train_size = int((1 - valid_frac) * len(self.ds))
                 valid_size = len(self.ds) - train_size
-                self.ds, self.valid_ds = random_split(self.ds, [train_size, valid_size], generator = torch.Generator().manual_seed(random_split_seed))
+                dataset, val_dataset = random_split(self.ds, [train_size, valid_size], generator = torch.Generator().manual_seed(random_split_seed))
                 self.print(f'training with dataset of {len(self.ds)} samples and validating with randomly splitted {len(self.valid_ds)} samples')
             else:
-                self.valid_ds = self.ds
+                val_dataset = dataset
                 self.print(f'training with shared training and valid dataset of {len(self.ds)} samples')
 
-            assert len(self.ds) >= batch_size, 'dataset must have sufficient samples for training'
-            assert len(self.valid_ds) >= batch_size, f'validation dataset must have sufficient number of samples (currently {len(self.valid_ds)}) for training'
+            assert len(dataset) >= batch_size, 'dataset must have sufficient samples for training'
+            assert len(val_dataset) >= batch_size, f'validation dataset must have sufficient number of samples (currently {len(self.valid_ds)}) for training'
 
-            # dataloader
+        if exists(dataset):
+            assert not exists(train_dataloader)
+            assert not exists(val_dataloader)
 
-            self.dl = get_dataloader(self.ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True, drop_last = dataloader_drop_last)
+            val_dataset = default(val_dataset, dataset)
 
-            self.valid_dl = get_dataloader(self.valid_ds, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True, drop_last = dataloader_drop_last)
+            train_dataloader = get_dataloader(dataset, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True, drop_last = dataloader_drop_last)
+            val_dataloader = get_dataloader(val_dataset, batch_size = batch_size, num_workers = dl_num_workers, shuffle = True, drop_last = dataloader_drop_last)
+
+        # dataloader
+
+        self.dl = train_dataloader
+        self.valid_dl = val_dataloader
+
+        assert exists(self.dl) and exists(self.valid_dl)
 
         # prepare with accelerator
 
