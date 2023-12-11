@@ -28,6 +28,7 @@ setup(
     'gateloop-transformer>=0.0.24',
     'joblib',
     'local-attention>=1.9.0',
+    'pytorch-warmup',
     'scikit-learn',
     'sentencepiece',
     'torch>=1.12',

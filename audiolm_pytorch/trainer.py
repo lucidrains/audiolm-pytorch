@@ -9,7 +9,7 @@ from functools import partial
 from collections import Counter
 from contextlib import contextmanager, nullcontext
 
-from beartype.typing import Union, List, Optional, Tuple
+from beartype.typing import Union, List, Optional, Tuple, Type
 from typing_extensions import Annotated
 
 from beartype import beartype
@@ -19,7 +19,11 @@ from beartype.vale import Is
 import torch
 import torchaudio
 from torch import nn
+from torch.optim import Optimizer
+from torch.optim.lr_scheduler import LambdaLR, _LRScheduler
 from torch.utils.data import Dataset, DataLoader, random_split
+
+import pytorch_warmup as warmup
 
 from einops import rearrange
 
@@ -54,6 +58,8 @@ from accelerate.tracking import WandBTracker
 # constants
 
 DEFAULT_SAMPLE_RATE = 16000
+
+ConstantLRScheduler = partial(LambdaLR, lr_lambda = lambda step: 1.)
 
 # make sure only one trainer is instantiated
 
@@ -152,6 +158,53 @@ def checkpoint_num_steps(checkpoint_path):
 
     return int(results[-1])
 
+# optimizer with scheduler + warmup
+
+class OptimizerWithWarmupSchedule(nn.Module):
+    @beartype
+    def __init__(
+        self,
+        accelerator: Accelerator,
+        optimizer: Optimizer,
+        scheduler: Optional[Type[_LRScheduler]] = None,
+        scheduler_kwargs: dict = dict(),
+        warmup_steps: int = 0
+    ):
+        super().__init__()
+        self.warmup = warmup.LinearWarmup(optimizer, warmup_period = warmup_steps)
+
+        if exists(scheduler):
+            self.scheduler = scheduler(optimizer, **scheduler_kwargs)
+        else:
+            self.scheduler = ConstantLRScheduler(optimizer)
+
+        self.optimizer = optimizer
+
+        self.optimizer, self.scheduler = accelerator.prepare(self.optimizer, self.scheduler)
+        self.accelerator = accelerator
+
+    def state_dict(self):
+        return dict(
+            optimizer = self.optimizer.state_dict(),
+            scheduler = self.scheduler.state_dict(),
+            warmup = self.warmup.state_dict()
+        )
+
+    def load_state_dict(self, pkg):
+        self.optimizer.load_state_dict(pkg['optimizer'])
+        self.scheduler.load_state_dict(pkg['scheduler'])
+        self.warmup.load_state_dict(pkg['warmup'])
+
+    def zero_grad(self):
+        self.optimizer.zero_grad()
+
+    def step(self):
+        self.optimizer.step()
+
+        if not self.accelerator.optimizer_step_was_skipped:
+            with self.warmup.dampening():
+                self.scheduler.step()
+
 # main trainer class
 
 class SoundStreamTrainer(nn.Module):
@@ -172,6 +225,12 @@ class SoundStreamTrainer(nn.Module):
         lr: float = 2e-4,
         grad_accum_every: int = 4,
         wd: float = 0.,
+        warmup_steps: int = 1000,
+        scheduler: Optional[Type[_LRScheduler]] = None,
+        scheduler_kwargs: dict = dict(),
+        discr_warmup_steps: Optional[int] = None,
+        discr_scheduler: Optional[Type[_LRScheduler]] = None,
+        discr_scheduler_kwargs: dict = dict(),
         max_grad_norm: float = 0.5,
         discr_max_grad_norm: float = None,
         save_results_every: int = 100,
@@ -240,13 +299,33 @@ class SoundStreamTrainer(nn.Module):
 
         # optimizers
 
-        self.optim = get_optimizer(soundstream.non_discr_parameters(), lr = lr, wd = wd)
+        self.optim = OptimizerWithWarmupSchedule(
+            self.accelerator,
+            get_optimizer(soundstream.non_discr_parameters(), lr = lr, wd = wd),
+            scheduler = scheduler,
+            scheduler_kwargs = scheduler_kwargs,
+            warmup_steps = warmup_steps
+        )
+
+        discr_warmup_steps = default(discr_warmup_steps, warmup_steps)
 
         for discr_optimizer_key, discr in self.multiscale_discriminator_iter():
-            one_multiscale_discr_optimizer = get_optimizer(discr.parameters(), lr = lr, wd = wd)
+            one_multiscale_discr_optimizer = OptimizerWithWarmupSchedule(
+                self.accelerator,
+                get_optimizer(discr.parameters(), lr = lr, wd = wd),
+                scheduler = discr_scheduler,
+                scheduler_kwargs = discr_scheduler_kwargs,
+                warmup_steps = discr_warmup_steps
+            )
             setattr(self, discr_optimizer_key, one_multiscale_discr_optimizer)
 
-        self.discr_optim = get_optimizer(soundstream.stft_discriminator.parameters(), lr = lr, wd = wd)
+        self.discr_optim = OptimizerWithWarmupSchedule(
+            self.accelerator,
+            get_optimizer(soundstream.stft_discriminator.parameters(), lr = lr, wd = wd),
+            scheduler = discr_scheduler,
+            scheduler_kwargs = discr_scheduler_kwargs,
+            warmup_steps = discr_warmup_steps
+        )
 
         # max grad norm
 
@@ -596,6 +675,7 @@ class SoundStreamTrainer(nn.Module):
 
             for model, label in models:
                 model.eval()
+                model = model.to(device)
 
                 with torch.inference_mode():
                     recons = model(wave, return_recons_only = True)
@@ -1063,7 +1143,6 @@ class CoarseTransformerTrainer(nn.Module):
 
         # + 1 to start from the next step and avoid overwriting the last checkpoint
         self.steps = torch.tensor([checkpoint_num_steps(path) + 1], device=self.device)
-
 
     def print(self, msg):
         self.accelerator.print(msg)
