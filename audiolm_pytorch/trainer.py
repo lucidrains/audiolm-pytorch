@@ -737,6 +737,7 @@ class SemanticTransformerTrainer(nn.Module):
         results_folder = './results',
         accelerate_kwargs: dict = dict(),
         init_process_group_timeout_seconds = 1800,
+        use_wandb_tracking = False,
         split_batches = False,
         drop_last = False,
         force_clear_prev_results = None,
@@ -746,13 +747,14 @@ class SemanticTransformerTrainer(nn.Module):
         check_one_trainer()
 
         init_process_kwargs = InitProcessGroupKwargs(timeout = timedelta(seconds = init_process_group_timeout_seconds))
-
+        if use_wandb_tracking:
+            self.use_wandb_tracking = use_wandb_tracking
+            accelerate_kwargs.update(log_with = 'wandb')
         self.accelerator = Accelerator(
             kwargs_handlers = [DEFAULT_DDP_KWARGS, init_process_kwargs],
             split_batches = split_batches,
             **accelerate_kwargs
         )
-
         self.wav2vec = wav2vec
         self.transformer = transformer
         self.audio_conditioner = audio_conditioner
@@ -898,7 +900,23 @@ class SemanticTransformerTrainer(nn.Module):
             assert not has_duplicates(self.ds_fields), 'dataset fields must not have duplicate field names'
 
         return dict(zip(self.ds_fields, data))
+    @contextmanager
+    def wandb_tracker(self, project, run = None, hps = None):
+        assert self.use_wandb_tracking, '`use_wandb_tracking` must be set to True on SemanticTransformerTrainer'
 
+        hps = default(hps, self.tracker_hps)
+
+        self.accelerator.init_trackers(project, config = None)
+
+        if exists(run):
+            wandb_tracker = find_first(lambda el: isinstance(el, WandBTracker), self.accelerator.trackers)
+            assert exists(wandb_tracker)
+
+            wandb_tracker.run.name = run
+
+        yield
+
+        self.accelerator.end_training()
     def train_step(self):
         device = self.device
 
@@ -982,6 +1000,24 @@ class SemanticTransformerTrainer(nn.Module):
 # fine transformer trainer
 
 class CoarseTransformerTrainer(nn.Module):
+
+    @contextmanager
+    def wandb_tracker(self, project, run = None, hps = None):
+        assert self.use_wandb_tracking, '`use_wandb_tracking` must be set to True on CoarseTransformerTrainer'
+
+        hps = default(hps, self.tracker_hps)
+
+        self.accelerator.init_trackers(project, config = None)
+
+        if exists(run):
+            wandb_tracker = find_first(lambda el: isinstance(el, WandBTracker), self.accelerator.trackers)
+            assert exists(wandb_tracker)
+
+            wandb_tracker.run.name = run
+
+        yield
+
+        self.accelerator.end_training()  
     @beartype
     def __init__(
         self,
@@ -1012,11 +1048,14 @@ class CoarseTransformerTrainer(nn.Module):
         split_batches = False,
         drop_last = False,
         force_clear_prev_results = None,
+        use_wandb_tracking = False,
         average_valid_loss_over_grad_accum_every: bool = True,  # if False, valid loss on a single batch
     ):
         super().__init__()
         check_one_trainer()
-
+        if use_wandb_tracking:
+            self.use_wandb_tracking = use_wandb_tracking
+            accelerate_kwargs.update(log_with = 'wandb')
         init_process_kwargs = InitProcessGroupKwargs(timeout = timedelta(seconds = init_process_group_timeout_seconds))
 
         self.accelerator = Accelerator(
@@ -1260,6 +1299,23 @@ class CoarseTransformerTrainer(nn.Module):
 # fine transformer trainer
 
 class FineTransformerTrainer(nn.Module):
+    @contextmanager
+    def wandb_tracker(self, project, run = None, hps = None):
+        assert self.use_wandb_tracking, '`use_wandb_tracking` must be set to True on FineTransformerTrainer'
+
+        hps = default(hps, self.tracker_hps)
+
+        self.accelerator.init_trackers(project, config = None)
+
+        if exists(run):
+            wandb_tracker = find_first(lambda el: isinstance(el, WandBTracker), self.accelerator.trackers)
+            assert exists(wandb_tracker)
+
+            wandb_tracker.run.name = run
+
+        yield
+
+        self.accelerator.end_training()  
     @beartype
     def __init__(
         self,
@@ -1288,12 +1344,15 @@ class FineTransformerTrainer(nn.Module):
         init_process_group_timeout_seconds = 1800,
         split_batches = False,
         drop_last = False,
+        use_wandb_tracking = False,
         force_clear_prev_results = None,
         average_valid_loss_over_grad_accum_every: bool = True, # if False, valid loss on a single batch
     ):
         super().__init__()
         check_one_trainer()
-
+        if use_wandb_tracking:
+            self.use_wandb_tracking = use_wandb_tracking
+            accelerate_kwargs.update(log_with = 'wandb')
         init_process_kwargs = InitProcessGroupKwargs(timeout = timedelta(seconds = init_process_group_timeout_seconds))
 
         self.accelerator = Accelerator(
