@@ -28,7 +28,7 @@ import pytorch_warmup as warmup
 from einops import rearrange
 
 from audiolm_pytorch.optimizer import get_optimizer
-
+import wandb
 from ema_pytorch import EMA
 
 from audiolm_pytorch.soundstream import SoundStream
@@ -983,7 +983,8 @@ class SemanticTransformerTrainer(nn.Module):
         if self.is_main and not (steps % self.save_model_every):
             model_path = str(self.results_folder / f'semantic.transformer.{steps}.pt')
             self.save(model_path)
-
+            if self.use_wandb_tracking:
+                wandb.save(model_path)
             self.print(f'{steps}: saving model to {str(self.results_folder)}')
 
         self.accelerator.wait_for_everyone()
@@ -1283,7 +1284,8 @@ class CoarseTransformerTrainer(nn.Module):
         if self.is_main and not (steps % self.save_model_every):
             model_path = str(self.results_folder / f'coarse.transformer.{steps}.pt')
             self.save(model_path)
-
+            if self.use_wandb_tracking:
+                wandb.save(model_path)
             self.print(f'{steps}: saving model to {str(self.results_folder)}')
 
         self.accelerator.wait_for_everyone()
@@ -1577,7 +1579,8 @@ class FineTransformerTrainer(nn.Module):
         if self.is_main and not (steps % self.save_model_every):
             model_path = str(self.results_folder / f'fine.transformer.{steps}.pt')
             self.save(model_path)
-
+            if self.use_wandb_tracking:
+                wandb.save(model_path)
             self.print(f'{steps}: saving model to {str(self.results_folder)}')
 
         self.accelerator.wait_for_everyone()
