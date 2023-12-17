@@ -851,6 +851,8 @@ class SemanticTransformerTrainer(nn.Module):
         self.results_folder.mkdir(parents = True, exist_ok = True)
         
         hps = {"num_train_steps": num_train_steps, "data_max_length": data_max_length, "learning_rate": lr}
+        self.tracker_hps = hps
+
         self.accelerator.init_trackers("semantic", config=hps)
         self.average_valid_loss_over_grad_accum_every = average_valid_loss_over_grad_accum_every
 
@@ -1165,6 +1167,8 @@ class CoarseTransformerTrainer(nn.Module):
         self.results_folder.mkdir(parents = True, exist_ok = True)
 
         hps = {"num_train_steps": num_train_steps, "data_max_length": data_max_length, "learning_rate": lr}
+        self.tracker_hps = hps
+
         self.accelerator.init_trackers("coarse", config=hps)        
 
         self.train_wrapper.to(self.device)
@@ -1458,6 +1462,8 @@ class FineTransformerTrainer(nn.Module):
         self.results_folder.mkdir(parents = True, exist_ok = True)
 
         hps = {"num_train_steps": num_train_steps, "data_max_length": data_max_length, "learning_rate": lr}
+        self.tracker_hps = hps
+
         self.accelerator.init_trackers("fine", config=hps)        
 
         self.train_wrapper.to(self.device)
