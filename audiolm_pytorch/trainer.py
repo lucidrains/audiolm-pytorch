@@ -1002,24 +1002,6 @@ class SemanticTransformerTrainer(nn.Module):
 # fine transformer trainer
 
 class CoarseTransformerTrainer(nn.Module):
-
-    @contextmanager
-    def wandb_tracker(self, project, run = None, hps = None):
-        assert self.use_wandb_tracking, '`use_wandb_tracking` must be set to True on CoarseTransformerTrainer'
-
-        hps = default(hps, self.tracker_hps)
-
-        self.accelerator.init_trackers(project, config = None)
-
-        if exists(run):
-            wandb_tracker = find_first(lambda el: isinstance(el, WandBTracker), self.accelerator.trackers)
-            assert exists(wandb_tracker)
-
-            wandb_tracker.run.name = run
-
-        yield
-
-        self.accelerator.end_training()  
     @beartype
     def __init__(
         self,
@@ -1197,6 +1179,23 @@ class CoarseTransformerTrainer(nn.Module):
     def generate(self, *args, **kwargs):
         return self.train_wrapper.generate(*args, **kwargs)
 
+    @contextmanager
+    def wandb_tracker(self, project, run = None, hps = None):
+        assert self.use_wandb_tracking, '`use_wandb_tracking` must be set to True on CoarseTransformerTrainer'
+
+        hps = default(hps, self.tracker_hps)
+
+        self.accelerator.init_trackers(project, config = None)
+
+        if exists(run):
+            wandb_tracker = find_first(lambda el: isinstance(el, WandBTracker), self.accelerator.trackers)
+            assert exists(wandb_tracker)
+
+            wandb_tracker.run.name = run
+
+        yield
+
+        self.accelerator.end_training()  
     @property
     def device(self):
         return self.accelerator.device
@@ -1303,23 +1302,6 @@ class CoarseTransformerTrainer(nn.Module):
 # fine transformer trainer
 
 class FineTransformerTrainer(nn.Module):
-    @contextmanager
-    def wandb_tracker(self, project, run = None, hps = None):
-        assert self.use_wandb_tracking, '`use_wandb_tracking` must be set to True on FineTransformerTrainer'
-
-        hps = default(hps, self.tracker_hps)
-
-        self.accelerator.init_trackers(project, config = None)
-
-        if exists(run):
-            wandb_tracker = find_first(lambda el: isinstance(el, WandBTracker), self.accelerator.trackers)
-            assert exists(wandb_tracker)
-
-            wandb_tracker.run.name = run
-
-        yield
-
-        self.accelerator.end_training()  
     @beartype
     def __init__(
         self,
@@ -1491,7 +1473,23 @@ class FineTransformerTrainer(nn.Module):
 
     def generate(self, *args, **kwargs):
         return self.train_wrapper.generate(*args, **kwargs)
+    @contextmanager
+    def wandb_tracker(self, project, run = None, hps = None):
+        assert self.use_wandb_tracking, '`use_wandb_tracking` must be set to True on FineTransformerTrainer'
 
+        hps = default(hps, self.tracker_hps)
+
+        self.accelerator.init_trackers(project, config = None)
+
+        if exists(run):
+            wandb_tracker = find_first(lambda el: isinstance(el, WandBTracker), self.accelerator.trackers)
+            assert exists(wandb_tracker)
+
+            wandb_tracker.run.name = run
+
+        yield
+
+        self.accelerator.end_training()  
     @property
     def device(self):
         return self.accelerator.device
