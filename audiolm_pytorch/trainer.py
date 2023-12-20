@@ -1038,8 +1038,8 @@ class CoarseTransformerTrainer(nn.Module):
     ):
         super().__init__()
         check_one_trainer()
+        self.use_wandb_tracking = use_wandb_tracking
         if use_wandb_tracking:
-            self.use_wandb_tracking = use_wandb_tracking
             accelerate_kwargs.update(log_with = 'wandb')
         init_process_kwargs = InitProcessGroupKwargs(timeout = timedelta(seconds = init_process_group_timeout_seconds))
 
@@ -1140,7 +1140,7 @@ class CoarseTransformerTrainer(nn.Module):
         self.valid_dl_iter = cycle(self.valid_dl)
 
         self.save_model_every = save_model_every
-        self.save_results_every = save_results_every    
+        self.save_results_every = save_results_every
 
         self.results_folder = Path(results_folder)
 
@@ -1152,7 +1152,7 @@ class CoarseTransformerTrainer(nn.Module):
         hps = {"num_train_steps": num_train_steps, "data_max_length": data_max_length, "learning_rate": lr}
         self.tracker_hps = hps
 
-        self.accelerator.init_trackers("coarse", config=hps)        
+        self.accelerator.init_trackers("coarse", config=hps)
 
         self.train_wrapper.to(self.device)
         self.average_valid_loss_over_grad_accum_every = average_valid_loss_over_grad_accum_every
@@ -1338,8 +1338,8 @@ class FineTransformerTrainer(nn.Module):
     ):
         super().__init__()
         check_one_trainer()
+        self.use_wandb_tracking = use_wandb_tracking
         if use_wandb_tracking:
-            self.use_wandb_tracking = use_wandb_tracking
             accelerate_kwargs.update(log_with = 'wandb')
         init_process_kwargs = InitProcessGroupKwargs(timeout = timedelta(seconds = init_process_group_timeout_seconds))
 
@@ -1435,7 +1435,7 @@ class FineTransformerTrainer(nn.Module):
         self.valid_dl_iter = cycle(self.valid_dl)
 
         self.save_model_every = save_model_every
-        self.save_results_every = save_results_every    
+        self.save_results_every = save_results_every
 
         self.results_folder = Path(results_folder)
 
@@ -1448,7 +1448,7 @@ class FineTransformerTrainer(nn.Module):
         hps = {"num_train_steps": num_train_steps, "data_max_length": data_max_length, "learning_rate": lr}
         self.tracker_hps = hps
 
-        self.accelerator.init_trackers("fine", config=hps)        
+        self.accelerator.init_trackers("fine", config=hps)
 
         self.train_wrapper.to(self.device)
         self.average_valid_loss_over_grad_accum_every = average_valid_loss_over_grad_accum_every
