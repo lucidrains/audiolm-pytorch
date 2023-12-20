@@ -747,8 +747,8 @@ class SemanticTransformerTrainer(nn.Module):
         check_one_trainer()
 
         init_process_kwargs = InitProcessGroupKwargs(timeout = timedelta(seconds = init_process_group_timeout_seconds))
+        self.use_wandb_tracking = use_wandb_tracking
         if use_wandb_tracking:
-            self.use_wandb_tracking = use_wandb_tracking
             accelerate_kwargs.update(log_with = 'wandb')
         self.accelerator = Accelerator(
             kwargs_handlers = [DEFAULT_DDP_KWARGS, init_process_kwargs],
@@ -840,7 +840,7 @@ class SemanticTransformerTrainer(nn.Module):
         self.valid_dl_iter = cycle(self.valid_dl)
 
         self.save_model_every = save_model_every
-        self.save_results_every = save_results_every    
+        self.save_results_every = save_results_every
 
         self.results_folder = Path(results_folder)
 
@@ -849,7 +849,7 @@ class SemanticTransformerTrainer(nn.Module):
 
         self.accelerator.wait_for_everyone()
         self.results_folder.mkdir(parents = True, exist_ok = True)
-        
+
         hps = {"num_train_steps": num_train_steps, "data_max_length": data_max_length, "learning_rate": lr}
         self.tracker_hps = hps
 
