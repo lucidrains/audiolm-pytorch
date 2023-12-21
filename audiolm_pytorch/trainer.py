@@ -902,6 +902,7 @@ class SemanticTransformerTrainer(nn.Module):
             assert not has_duplicates(self.ds_fields), 'dataset fields must not have duplicate field names'
 
         return dict(zip(self.ds_fields, data))
+
     @contextmanager
     def wandb_tracker(self, project, run = None, hps = None):
         assert self.use_wandb_tracking, '`use_wandb_tracking` must be set to True on SemanticTransformerTrainer'
@@ -919,6 +920,7 @@ class SemanticTransformerTrainer(nn.Module):
         yield
 
         self.accelerator.end_training()
+
     def train_step(self):
         device = self.device
 
@@ -1197,6 +1199,7 @@ class CoarseTransformerTrainer(nn.Module):
         yield
 
         self.accelerator.end_training()  
+
     @property
     def device(self):
         return self.accelerator.device
@@ -1475,6 +1478,7 @@ class FineTransformerTrainer(nn.Module):
 
     def generate(self, *args, **kwargs):
         return self.train_wrapper.generate(*args, **kwargs)
+
     @contextmanager
     def wandb_tracker(self, project, run = None, hps = None):
         assert self.use_wandb_tracking, '`use_wandb_tracking` must be set to True on FineTransformerTrainer'
@@ -1491,7 +1495,8 @@ class FineTransformerTrainer(nn.Module):
 
         yield
 
-        self.accelerator.end_training()  
+        self.accelerator.end_training() 
+
     @property
     def device(self):
         return self.accelerator.device
