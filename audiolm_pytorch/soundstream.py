@@ -520,7 +520,7 @@ class SoundStream(Module):
             encoder_blocks.append(EncoderBlock(chan_in, chan_out, layer_stride, enc_cycle_dilations, squeeze_excite, pad_mode))
 
             if use_gate_loop_layers:
-                encoder_blocks.append(Residual(ChannelTranspose(GateLoop(chan_out, use_heinsen = True))))
+                encoder_blocks.append(Residual(ChannelTranspose(GateLoop(chan_out, use_heinsen = False))))
 
         self.encoder = nn.Sequential(
             CausalConv1d(input_channels, channels, 7, pad_mode = pad_mode),
