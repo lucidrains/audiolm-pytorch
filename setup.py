@@ -26,7 +26,7 @@ setup(
     'encodec',
     'fairseq',
     'wandb',
-    'gateloop-transformer>=0.5.2',
+    'gateloop-transformer>=0.2.3',
     'joblib',
     'local-attention>=1.9.0',
     'pytorch-warmup',
