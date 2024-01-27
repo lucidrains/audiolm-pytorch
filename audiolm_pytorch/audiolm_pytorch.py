@@ -744,7 +744,7 @@ class CoarseTransformer(nn.Module):
             **kwargs
         )
 
-        self.codebook_size = codebook_size
+        self.codebook_size_with_eos = codebook_size_with_eos
         self.num_coarse_quantizers = num_coarse_quantizers
 
         self.to_semantic_logits = nn.Linear(dim, num_semantic_tokens + 1) if project_semantic_logits else None
@@ -845,7 +845,7 @@ class CoarseTransformer(nn.Module):
 
         coarse_token_ids, semantic_token_ids = map(lambda t: rearrange(t, 'b ... -> b (...)'), (coarse_token_ids, semantic_token_ids))
 
-        offsets = self.codebook_size * arange(self.num_coarse_quantizers)
+        offsets = self.codebook_size_with_eos * arange(self.num_coarse_quantizers)
         offsets = repeat(offsets, 'q -> 1 (n q)', n = ceil_div(coarse_token_ids.shape[-1], self.num_coarse_quantizers))
         offsets = offsets[:, :coarse_token_ids.shape[-1]]
         coarse_token_ids = coarse_token_ids + offsets
