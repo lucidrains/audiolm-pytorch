@@ -492,7 +492,7 @@ class Transformer(nn.Module):
 
             residual = x
 
-            attn_out, layer_kv_cache = attn(x, attn_bias = rel_pos_bias, mask = self_attn_mask, kv_cache = next(kv_cache, None), return_kv_cache = True, **self_attn_kwargs)
+            x, layer_kv_cache = attn(x, attn_bias = rel_pos_bias, mask = self_attn_mask, kv_cache = next(kv_cache, None), return_kv_cache = True, **self_attn_kwargs)
             new_kv_cache.append(layer_kv_cache)
 
             x = x + residual
