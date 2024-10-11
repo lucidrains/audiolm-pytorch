@@ -463,6 +463,7 @@ class SoundStream(Module):
         rq_quantize_dropout_multiple_of = 1,
         rq_groups = 1,
         rq_stochastic_sample_codes = False,
+        rq_rotation_trick = True,
         rq_kwargs: dict = {},
         use_lookup_free_quantizer = False,              # proposed in https://arxiv.org/abs/2310.05737, adapted for residual quantization
         use_finite_scalar_quantizer = False,            # proposed in https://arxiv.org/abs/2309.15505, adapted for residual quantization
@@ -600,6 +601,7 @@ class SoundStream(Module):
                 quantize_dropout = True,
                 quantize_dropout_cutoff_index = quantize_dropout_cutoff_index,
                 stochastic_sample_codes = rq_stochastic_sample_codes,
+                rotation_trick = rq_rotation_trick,
                 **rq_kwargs
             )
 
