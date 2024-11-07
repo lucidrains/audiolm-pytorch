@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import math
 from functools import partial, wraps
 
-from beartype.typing import Optional, Union, List
 from beartype import beartype
 
 import torch
@@ -625,7 +626,7 @@ class SemanticTransformer(nn.Module):
         *,
         ids = None,
         return_loss = False,
-        text: Optional[List[str]] = None,
+        text: list[str] | None = None,
         text_embeds = None,
         self_attn_mask = None,
         cond_drop_prob = None,
@@ -813,7 +814,7 @@ class CoarseTransformer(nn.Module):
         semantic_token_ids,
         coarse_token_ids,
         self_attn_mask = None,
-        text: Optional[List[str]] = None,
+        text: list[str] | None = None,
         text_embeds = None,
         cond_drop_prob = None,
         return_only_coarse_logits = False,
@@ -1089,7 +1090,7 @@ class FineTransformer(nn.Module):
         self,
         coarse_token_ids,
         fine_token_ids,
-        text: Optional[List[str]] = None,
+        text: list[str] | None = None,
         text_embeds = None,
         cond_drop_prob = None,
         self_attn_mask = None,
@@ -1327,8 +1328,8 @@ class SemanticTransformerWrapper(nn.Module):
         self,
         *,
         transformer: SemanticTransformer,
-        wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
-        audio_conditioner: Optional[AudioConditionerBase] = None,
+        wav2vec: FairseqVQWav2Vec | HubertWithKmeans | None = None,
+        audio_conditioner: AudioConditionerBase | None = None,
         pad_id = -1,
         unique_consecutive = True,
         mask_prob = 0.15
@@ -1362,7 +1363,7 @@ class SemanticTransformerWrapper(nn.Module):
         self,
         *,
         max_length,
-        text: Optional[List[str]] = None,
+        text: list[str] | None = None,
         text_embeds = None,
         prime_wave = None,
         prime_wave_input_sample_hz = None,
@@ -1524,9 +1525,9 @@ class CoarseTransformerWrapper(nn.Module):
         self,
         *,
         transformer: CoarseTransformer,
-        codec: Optional[Union[SoundStream, EncodecWrapper]]  = None,
-        wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]] = None,
-        audio_conditioner: Optional[AudioConditionerBase] = None,
+        codec: SoundStream | EncodecWrapper | None  = None,
+        wav2vec: FairseqVQWav2Vec | HubertWithKmeans | None = None,
+        audio_conditioner: AudioConditionerBase | None = None,
         pad_id = -1,
         unique_consecutive = True,
         semantic_cross_entropy_loss_weight = 1.,
@@ -1564,10 +1565,10 @@ class CoarseTransformerWrapper(nn.Module):
         self,
         *,
         semantic_token_ids,
-        prime_wave: Optional[Tensor] = None,
+        prime_wave: Tensor | None = None,
         prime_wave_input_sample_hz = None,
-        prime_coarse_token_ids: Optional[Tensor] = None,
-        text: Optional[List[str]] = None,
+        prime_coarse_token_ids: Tensor | None = None,
+        text: list[str] | None = None,
         text_embeds = None,
         max_time_steps = 512,
         cond_scale = 3.,
@@ -1811,8 +1812,8 @@ class FineTransformerWrapper(nn.Module):
         self,
         *,
         transformer: FineTransformer,
-        codec: Optional[Union[SoundStream, EncodecWrapper]] = None,
-        audio_conditioner: Optional[AudioConditionerBase] = None,
+        codec: SoundStream | EncodecWrapper | None = None,
+        audio_conditioner: AudioConditionerBase | None = None,
         coarse_cross_entropy_loss_weight = 1.,
         pad_id = -1,
         mask_prob = 0.15
@@ -1852,10 +1853,10 @@ class FineTransformerWrapper(nn.Module):
         self,
         *,
         coarse_token_ids,
-        prime_wave: Optional[Tensor] = None,
+        prime_wave: Tensor | None = None,
         prime_wave_input_sample_hz = None,
-        prime_fine_token_ids: Optional[Tensor] = None,
-        text: Optional[List[str]] = None,
+        prime_fine_token_ids: Tensor | None = None,
+        text: list[str] | None = None,
         text_embeds = None,
         cond_scale = 3.,
         filter_thres = 0.9,
@@ -2095,12 +2096,12 @@ class AudioLM(nn.Module):
     def __init__(
         self,
         *,
-        wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]], 
-        codec: Union[SoundStream, EncodecWrapper],
+        wav2vec: FairseqVQWav2Vec | HubertWithKmeans | None, 
+        codec: SoundStream | EncodecWrapper,
         semantic_transformer: SemanticTransformer,
         coarse_transformer: CoarseTransformer,
         fine_transformer: FineTransformer,
-        audio_conditioner: Optional[AudioConditionerBase] = None,
+        audio_conditioner: AudioConditionerBase | None = None,
         unique_consecutive = True
     ):
         super().__init__()
@@ -2148,8 +2149,8 @@ class AudioLM(nn.Module):
         self,
         *,
         batch_size = 1,
-        text: Optional[List[str]] = None,
-        text_embeds: Optional[Tensor] = None,
+        text: list[str] | None = None,
+        text_embeds: Tensor | None = None,
         prime_wave = None,
         prime_wave_input_sample_hz = None,
         prime_wave_path = None,

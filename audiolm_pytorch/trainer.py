@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import copy
 from math import sqrt
@@ -9,7 +11,7 @@ from functools import partial
 from collections import Counter
 from contextlib import contextmanager, nullcontext
 
-from beartype.typing import Union, List, Optional, Tuple, Type
+from beartype.typing import Type
 from typing_extensions import Annotated
 
 from beartype import beartype
@@ -79,7 +81,7 @@ DATASET_FIELD_TYPE_CONFIG = dict(
         torch.Tensor,
         Is[lambda t: t.dtype == torch.float and t.ndim in {2, 3}]
     ],
-    text = List[str],
+    text = list[str],
     text_embeds = Annotated[
         torch.Tensor,
         Is[lambda t: t.dtype == torch.float and t.ndim == 3]
@@ -166,7 +168,7 @@ class OptimizerWithWarmupSchedule(nn.Module):
         self,
         accelerator: Accelerator,
         optimizer: Optimizer,
-        scheduler: Optional[Type[_LRScheduler]] = None,
+        scheduler: Type[_LRScheduler] | None = None,
         scheduler_kwargs: dict = dict(),
         warmup_steps: int = 0
     ):
@@ -216,20 +218,20 @@ class SoundStreamTrainer(nn.Module):
         num_train_steps: int,
         batch_size: int,
         data_max_length: int = None,
-        data_max_length_seconds: Union[int, float] = None,
+        data_max_length_seconds: int | float = None,
         folder: str = None,
-        dataset: Optional[Dataset] = None,
-        val_dataset: Optional[Dataset] = None,
-        train_dataloader: Optional[DataLoader] = None,
-        val_dataloader: Optional[DataLoader] = None,
+        dataset: Dataset | None = None,
+        val_dataset: Dataset | None = None,
+        train_dataloader: DataLoader | None = None,
+        val_dataloader: DataLoader | None = None,
         lr: float = 2e-4,
         grad_accum_every: int = 4,
         wd: float = 0.,
         warmup_steps: int = 1000,
-        scheduler: Optional[Type[_LRScheduler]] = None,
+        scheduler: Type[_LRScheduler] | None = None,
         scheduler_kwargs: dict = dict(),
-        discr_warmup_steps: Optional[int] = None,
-        discr_scheduler: Optional[Type[_LRScheduler]] = None,
+        discr_warmup_steps: int | None = None,
+        discr_scheduler: Type[_LRScheduler] | None = None,
         discr_scheduler_kwargs: dict = dict(),
         max_grad_norm: float = 0.5,
         discr_max_grad_norm: float = None,
@@ -245,7 +247,7 @@ class SoundStreamTrainer(nn.Module):
         ema_update_every: int = 10,
         apply_grad_penalty_every: int = 4,
         dl_num_workers: int = 0,
-        accelerator: Optional[Accelerator] = None,
+        accelerator: Accelerator | None = None,
         accelerate_kwargs: dict = dict(),
         init_process_group_timeout_seconds = 1800,
         dataloader_drop_last = True,
@@ -715,14 +717,14 @@ class SemanticTransformerTrainer(nn.Module):
     @beartype
     def __init__(
         self,
-        wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]],
+        wav2vec: FairseqVQWav2Vec | HubertWithKmeans | None,
         transformer: SemanticTransformer,
         *,
         num_train_steps,
         batch_size,
-        audio_conditioner: Optional[AudioConditionerBase] = None,
-        dataset: Optional[Dataset] = None,
-        valid_dataset: Optional[Dataset] = None,
+        audio_conditioner: AudioConditionerBase | None = None,
+        dataset: Dataset | None = None,
+        valid_dataset: Dataset | None = None,
         data_max_length = None,
         data_max_length_seconds = None,
         folder = None,
@@ -1009,15 +1011,15 @@ class CoarseTransformerTrainer(nn.Module):
     def __init__(
         self,
         transformer: CoarseTransformer,
-        codec: Union[SoundStream, EncodecWrapper],
-        wav2vec: Optional[Union[FairseqVQWav2Vec, HubertWithKmeans]],
+        codec: SoundStream | EncodecWrapper,
+        wav2vec: FairseqVQWav2Vec | HubertWithKmeans | None,
         *,
         num_train_steps,
         batch_size,
-        audio_conditioner: Optional[AudioConditionerBase] = None,
-        dataset: Optional[Dataset] = None,
-        valid_dataset: Optional[Dataset] = None,
-        ds_fields: Tuple[str, ...] = ('raw_wave', 'raw_wave_for_codec', 'text'),
+        audio_conditioner: AudioConditionerBase | None = None,
+        dataset: Dataset | None = None,
+        valid_dataset: Dataset | None = None,
+        ds_fields: tuple[str, ...] = ('raw_wave', 'raw_wave_for_codec', 'text'),
         data_max_length = None,
         data_max_length_seconds = None,
         folder = None,
@@ -1311,13 +1313,13 @@ class FineTransformerTrainer(nn.Module):
     def __init__(
         self,
         transformer: FineTransformer,
-        codec: Union[SoundStream, EncodecWrapper],
+        codec: SoundStream | EncodecWrapper,
         *,
         num_train_steps,
         batch_size,
-        audio_conditioner: Optional[AudioConditionerBase] = None,
-        dataset: Optional[Dataset] = None,
-        valid_dataset: Optional[Dataset] = None,
+        audio_conditioner: AudioConditionerBase | None = None,
+        dataset: Dataset | None = None,
+        valid_dataset: Dataset | None = None,
         data_max_length = None,
         data_max_length_seconds = None,
         dataset_normalize = False,

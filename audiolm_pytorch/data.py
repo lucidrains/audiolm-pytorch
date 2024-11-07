@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from functools import partial, wraps
 
@@ -35,10 +37,10 @@ class SoundDataset(Dataset):
     def __init__(
         self,
         folder,
-        target_sample_hz: Union[int, Tuple[int, ...]],  # target sample hz must be specified, or a tuple of them if one wants to return multiple resampled
+        target_sample_hz: int | Tuple[int, ...],  # target sample hz must be specified, or a tuple of them if one wants to return multiple resampled
         exts = ['flac', 'wav', 'mp3', 'webm'],
-        max_length: Optional[int] = None,               # max length would apply to the highest target_sample_hz, if there are multiple
-        seq_len_multiple_of: Optional[Union[int, Tuple[Optional[int], ...]]] = None
+        max_length: int | None = None,               # max length would apply to the highest target_sample_hz, if there are multiple
+        seq_len_multiple_of: int | tuple[int | None, ...] | None = None
     ):
         super().__init__()
         path = Path(folder)
