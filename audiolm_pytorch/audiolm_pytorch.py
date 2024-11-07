@@ -311,6 +311,8 @@ class Attention(nn.Module):
         prefix_context = None,
         prefix_context_mask = None,
         return_kv_cache = False,
+        return_values = False,
+        value_residual: Tensor | None = None,
         kv_cache = None
     ):
         b, n, _, device = *x.shape, x.device
@@ -345,6 +347,13 @@ class Attention(nn.Module):
         # project for queries, keys, values
 
         q, k, v = self.to_q(x), *self.to_kv(kv_input).chunk(2, dim = -1)
+
+        # for value residual learning
+
+        orig_v = v
+
+        if exists(value_residual):
+            v = 0.5 * (v + value_residual)
 
         # kv cache
 
@@ -383,10 +392,16 @@ class Attention(nn.Module):
         out = rearrange(out, 'b h n d -> b n (h d)')
         out = self.to_out(out)
 
-        if not return_kv_cache:
+        if not return_kv_cache and not return_values:
             return out
 
-        return out, kv_cache
+        if return_kv_cache and not return_values:
+            return out, kv_cache
+
+        if return_values and not return_kv_cache:
+            return out, orig_v
+
+        return out, (kv_cache, orig_v)
 
 # transformer
 
@@ -405,6 +420,7 @@ class Transformer(nn.Module):
         cond_as_self_attn_prefix = False,
         rel_pos_bias = True,
         flash_attn = False,
+        add_value_residual = True,
         **kwargs
     ):
         super().__init__()
@@ -430,6 +446,8 @@ class Transformer(nn.Module):
             ]))
 
         self.norm = LayerNorm(dim)
+
+        self.add_value_residual = add_value_residual
 
     def forward(
         self,
@@ -487,13 +505,22 @@ class Transformer(nn.Module):
                 prefix_context_mask = context_mask
             )
 
+        # value residuals
+
+        self_attn_value_residual = None
+        cross_attn_value_residual = None
+
         # transformer layers
 
         for attn, cross_attn, ff in self.layers:
 
             residual = x
 
-            x, layer_kv_cache = attn(x, attn_bias = rel_pos_bias, mask = self_attn_mask, kv_cache = next(kv_cache, None), return_kv_cache = True, **self_attn_kwargs)
+            x, (layer_kv_cache, values) = attn(x, attn_bias = rel_pos_bias, mask = self_attn_mask, kv_cache = next(kv_cache, None), return_kv_cache = True, return_values = True, value_residual = self_attn_value_residual, **self_attn_kwargs)
+
+            if self.add_value_residual:
+                self_attn_value_residual = default(self_attn_value_residual, values)
+
             new_kv_cache.append(layer_kv_cache)
 
             x = x + residual
@@ -501,7 +528,11 @@ class Transformer(nn.Module):
             if exists(cross_attn):
                 assert exists(context)
 
-                x = cross_attn(x, context = context, mask = context_mask) + x
+                cross_attend_out, values = cross_attn(x, context = context, mask = context_mask, return_values = True, value_residual = cross_attn_value_residual)
+                x = cross_attend_out + x
+
+                if self.add_value_residual:
+                    cross_attn_value_residual = default(cross_attn_value_residual, values)
 
             x = ff(x) + x
 
