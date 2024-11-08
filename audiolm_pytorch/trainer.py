@@ -667,7 +667,7 @@ class SoundStreamTrainer(nn.Module):
 
         self.accelerator.wait_for_everyone()
 
-        if self.is_main and not (steps % self.save_results_every):
+        if not (steps % self.save_results_every):
             models = [(self.unwrapped_soundstream, str(steps))]
             if self.use_ema:
                 models.append((self.ema_soundstream.ema_model if self.use_ema else self.unwrapped_soundstream, f'{steps}.ema'))
@@ -682,9 +682,10 @@ class SoundStreamTrainer(nn.Module):
                 with torch.inference_mode():
                     recons = model(wave, return_recons_only = True)
 
-                for ind, recon in enumerate(recons.unbind(dim = 0)):
-                    filename = str(self.results_folder / f'sample_{label}.flac')
-                    torchaudio.save(filename, recon.cpu().detach(), self.unwrapped_soundstream.target_sample_hz)
+                if self.is_main:
+                    for ind, recon in enumerate(recons.unbind(dim = 0)):
+                        filename = str(self.results_folder / f'sample_{label}.flac')
+                        torchaudio.save(filename, recon.cpu().detach(), self.unwrapped_soundstream.target_sample_hz)
 
             self.print(f'{steps}: saving to {str(self.results_folder)}')
 
