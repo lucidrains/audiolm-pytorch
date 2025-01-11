@@ -877,22 +877,25 @@ class SoundStream(Module):
 
             if self.single_channel:
                 real, fake = orig_x.clone(), recon_x.detach()
-                stft_real_logits, stft_fake_logits = map(self.stft_discriminator, (real.requires_grad_(), fake))
+                stft_real_logits, stft_fake_logits = map(self.stft_discriminator, (real.requires_grad_(), fake.requires_grad_()))
                 stft_discr_loss = hinge_discr_loss(stft_fake_logits, stft_real_logits)
 
                 if apply_grad_penalty:
-                    stft_grad_penalty = gradient_penalty(real, stft_discr_loss)
+                    stft_grad_penalty = gradient_penalty(real, stft_discr_loss) + gradient_penalty(fake, stft_discr_loss)
 
             scaled_real, scaled_fake = real, fake
             for discr, downsample in zip(self.discriminators, self.downsamples):
                 scaled_real, scaled_fake = map(downsample, (scaled_real, scaled_fake))
 
-                real_logits, fake_logits = map(discr, (scaled_real.requires_grad_(), scaled_fake))
+                real_logits, fake_logits = map(discr, (scaled_real.requires_grad_(), scaled_fake.requires_grad_()))
                 one_discr_loss = hinge_discr_loss(fake_logits, real_logits)
 
                 discr_losses.append(one_discr_loss)
                 if apply_grad_penalty:
-                    discr_grad_penalties.append(gradient_penalty(scaled_real, one_discr_loss))
+                    discr_grad_penalties.extend([
+                        gradient_penalty(scaled_real, one_discr_loss),
+                        gradient_penalty(scaled_fake, one_discr_loss)
+                    ])
 
             if not return_discr_losses_separately:
                 all_discr_losses = torch.stack(discr_losses).mean()
