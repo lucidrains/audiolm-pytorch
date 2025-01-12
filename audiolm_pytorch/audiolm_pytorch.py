@@ -21,6 +21,8 @@ from audiolm_pytorch.hubert_kmeans import HubertWithKmeans
 
 from audiolm_pytorch.t5 import t5_encode_text, get_encoded_dim, DEFAULT_T5_NAME
 
+from hyper_connections import get_init_and_expand_reduce_stream_functions
+
 from torchaudio.functional import resample
 
 from audiolm_pytorch.soundstream import SoundStream
@@ -421,6 +423,7 @@ class Transformer(nn.Module):
         rel_pos_bias = True,
         flash_attn = False,
         add_value_residual = True,
+        num_residual_streams = 4,
         **kwargs
     ):
         super().__init__()
@@ -438,11 +441,17 @@ class Transformer(nn.Module):
 
         self.rel_pos_bias = RelativePositionBias(dim = dim // 2, heads = heads) if rel_pos_bias else None
 
+        # hyper connections
+
+        init_hyper_conn, self.expand_streams, self.reduce_streams = get_init_and_expand_reduce_stream_functions(num_residual_streams, disable = num_residual_streams == 1)
+
+        # layers
+
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                Attention(dim = dim, heads = heads, dropout = attn_dropout, flash = flash_attn, causal = True, **kwargs),
-                Attention(dim = dim, heads = heads, dropout = attn_dropout, dim_context = dim_context, flash = flash_attn, num_null_kv = 1, norm_context = True, **kwargs) if cross_attend else None,
-                FeedForward(dim = dim, dropout = ff_dropout)
+                init_hyper_conn(dim = dim, branch = Attention(dim = dim, heads = heads, dropout = attn_dropout, flash = flash_attn, causal = True, **kwargs)),
+                init_hyper_conn(dim = dim, branch = Attention(dim = dim, heads = heads, dropout = attn_dropout, dim_context = dim_context, flash = flash_attn, num_null_kv = 1, norm_context = True, **kwargs)) if cross_attend else None,
+                init_hyper_conn(dim = dim, branch = FeedForward(dim = dim, dropout = ff_dropout))
             ]))
 
         self.norm = LayerNorm(dim)
@@ -510,6 +519,10 @@ class Transformer(nn.Module):
         self_attn_value_residual = None
         cross_attn_value_residual = None
 
+        # expand residual streams
+
+        x = self.expand_streams(x)
+
         # transformer layers
 
         for attn, cross_attn, ff in self.layers:
@@ -523,18 +536,21 @@ class Transformer(nn.Module):
 
             new_kv_cache.append(layer_kv_cache)
 
-            x = x + residual
-
             if exists(cross_attn):
                 assert exists(context)
 
-                cross_attend_out, values = cross_attn(x, context = context, mask = context_mask, return_values = True, value_residual = cross_attn_value_residual)
-                x = cross_attend_out + x
+                x, values = cross_attn(x, context = context, mask = context_mask, return_values = True, value_residual = cross_attn_value_residual)
 
                 if self.add_value_residual:
                     cross_attn_value_residual = default(cross_attn_value_residual, values)
 
-            x = ff(x) + x
+            x = ff(x)
+
+        # reduce residual streams
+
+        x = self.reduce_streams(x)
+
+        # final norm
 
         x = self.norm(x)
 

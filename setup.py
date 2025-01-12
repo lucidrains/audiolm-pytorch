@@ -27,6 +27,7 @@ setup(
     'fairseq',
     'wandb',
     'gateloop-transformer>=0.2.3',
+    'hyper-connections>=0.1.8',
     'joblib',
     'local-attention>=1.9.0',
     'pytorch-warmup',

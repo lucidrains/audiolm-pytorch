@@ -599,3 +599,14 @@ $ accelerate launch train.py
     url     = {https://api.semanticscholar.org/CorpusID:275405495}
 }
 ```
+
+```bibtex
+@article{Zhu2024HyperConnections,
+    title   = {Hyper-Connections},
+    author  = {Defa Zhu and Hongzhi Huang and Zihao Huang and Yutao Zeng and Yunyao Mao and Banggu Wu and Qiyang Min and Xun Zhou},
+    journal = {ArXiv},
+    year    = {2024},
+    volume  = {abs/2409.19606},
+    url     = {https://api.semanticscholar.org/CorpusID:272987528}
+}
+```
