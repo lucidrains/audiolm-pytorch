@@ -67,7 +67,7 @@ def hinge_gen_loss(fake):
 def leaky_relu(p = 0.1):
     return nn.LeakyReLU(p)
 
-def gradient_penalty(wave, output, weight = 10):
+def gradient_penalty(wave, output, weight = 10, center = 0.):
     batch_size, device = wave.shape[0], wave.device
 
     gradients = torch_grad(
@@ -80,7 +80,7 @@ def gradient_penalty(wave, output, weight = 10):
     )[0]
 
     gradients = rearrange(gradients, 'b ... -> b (...)')
-    return weight * ((vector_norm(gradients, dim = 1) - 1) ** 2).mean()
+    return weight * ((vector_norm(gradients, dim = 1) - center) ** 2).mean()
 
 # better sequential
 
